@@ -87,9 +87,10 @@ export const useSetupStore = create<SetupState>()(
 
           // Apply profile fields (merge onto defaults, don't overwrite localStorage values
           // if the user has already edited them in a previous session)
-          if (config.profile && state.profile.name === "") {
+          if (config.profile && (state.profile.name === "" || state.profile.description === "")) {
             updates.profile = {
               ...defaultProfile,
+              ...state.profile,
               ...config.profile,
             };
           }
