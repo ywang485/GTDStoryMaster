@@ -5,8 +5,32 @@ import { useRouter } from "next/navigation";
 import { useSetupStore } from "@/stores/use-setup-store";
 import { useGameStore } from "@/stores/use-game-store";
 import type { OptimizedTask } from "@/types/task";
-import type { PlotStructureResponse } from "@/lib/ai/schemas/plot-structure";
-import type { OptimizedTasksResponse } from "@/lib/ai/schemas/optimized-tasks";
+import type { PlotStructure } from "@/types/story";
+
+/** Builds a minimal plot from tasks so adventure/narrator/respond work without the generate-plot API. */
+function buildMinimalPlot(tasks: OptimizedTask[]): PlotStructure {
+  return {
+    title: "Your Quest",
+    premise: "A journey through your tasks, one step at a time.",
+    acts: [
+      {
+        actNumber: 1,
+        title: "The Journey",
+        description: "Complete your tasks in order.",
+        scenes: tasks.map((t, i) => ({
+          id: `scene-${t.id}`,
+          title: t.title,
+          description: t.description ?? t.title,
+          associatedTaskIds: [t.id],
+          metaphor: t.title,
+          narrativeHook: `Your next task: ${t.title}`,
+          suggestedChoices: ["Continue", "Skip for now"],
+          transitionHint: "On to the next task.",
+        })),
+      },
+    ],
+  };
+}
 
 const loadingMessages = [
   "The oracle is reading your fate...",
@@ -47,7 +71,7 @@ export function PreparationScreen() {
     try {
       // Step 1: Optimize tasks
       setStage("optimizing");
-      const optimizeRes = await fetch("/api/ai/optimize-tasks", {
+      /*const optimizeRes = await fetch("/api/ai/optimize-tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tasks, profile, storyWorld }),
@@ -73,12 +97,21 @@ export function PreparationScreen() {
             estimatedMinutes: ot.estimatedMinutes,
           };
         },
-      );
+      );*/
 
+
+      // Use input tasks as-is (no optimization)
+      const optimizedTasks: OptimizedTask[] = tasks.map((t, index) => ({
+        ...t,
+        originalIndex: index,
+        optimizedOrder: index,
+        rationale: "",
+        questSuggestion: "",
+      }));
       setOptimizedTasks(optimizedTasks);
 
       // Step 2: Generate plot
-      setStage("plotting");
+      /*setStage("plotting");
       const plotRes = await fetch("/api/ai/generate-plot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,12 +121,8 @@ export function PreparationScreen() {
           storyWorld,
         }),
       });
-
-      if (!plotRes.ok) {
-        throw new Error(`Plot generation failed: ${plotRes.statusText}`);
-      }
-
-      const plotData: PlotStructureResponse = await plotRes.json();
+      
+      const plotData: PlotStructure = await plotRes.json();
 
       setPlotStructure({
         title: plotData.title,
@@ -101,14 +130,26 @@ export function PreparationScreen() {
         acts: plotData.acts,
       });
 
-      setCharacter({
+      if (!plotRes.ok) {
+        throw new Error(`Plot generation failed: ${plotRes.statusText}`);
+      }*/
+
+
+      /*setCharacter({
         characterName: plotData.characterName,
         role: plotData.characterRole,
         backstory: plotData.characterBackstory,
         traits: plotData.characterTraits,
         level: 1,
         xp: 0,
-      });
+      });*/
+      
+      // Character stays null; narrator falls back to profile.name
+
+      // Build minimal plot from tasks (no generate-plot API) so adventure page,
+      // narrator, respond API, and scene advancement still work.
+      const minimalPlot: PlotStructure = buildMinimalPlot(optimizedTasks);
+      setPlotStructure(minimalPlot);
 
       // Set up game tasks with first one active
       const gameTasks = optimizedTasks.map((t, i) => ({

@@ -1,9 +1,10 @@
 {
   "profile": {
-    "name": "Alex",
-    "description": "28, non-binary. Curious and analytical, loves deep dives into complex problems. Tends to procrastinate on administrative tasks but hyperfocuses on creative work. Hobbies: reading sci-fi, hiking, cooking, board games. Core values: growth, honesty, creativity, compassion. Believes in growth mindset, stoicism, and effective altruism."
+    "name": "Wenli Yang",
+    "description": " - Age: 30 - Gender: Male - Personality: gentle, reluctant genius wrapped in chronic indifference to ambition - Hobbies: low-energy, anti-heroic hobbies like Reading history, Drinking tea and brandy, Sleeping / napping, Avoiding chores- Belief Systems: anti-heroic, skeptical humanism anchored in historical realism"
   },
   "storyWorld": {
-    "preset": "fantasy-kingdom"
+    "name": "Meiji Restoration",
+    "description": "The story set in Japan at Meiji Restoration period. The protagonist is Sakamoto Ryoma."
   }
 }
