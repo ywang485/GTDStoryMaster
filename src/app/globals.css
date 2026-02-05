@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/* ====================================
+   GTD Story Master - Text Adventure Theme
+   ==================================== */
+
+@theme {
+  --font-mono: "Courier New", "Courier", monospace;
+  --font-sans: "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
+}
+
+/* Base dark theme */
+:root {
+  --color-bg: #0a0a0f;
+  --color-bg-secondary: #111118;
+  --color-surface: #1a1a24;
+  --color-border: #2a2a3a;
+  --color-text: #e0e0e8;
+  --color-text-muted: #8888a0;
+  --color-accent: #f59e0b;
+  --color-accent-dim: rgba(245, 158, 11, 0.15);
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+}
+
+/* Storyworld theme overrides (future adaptive styling) */
+[data-theme="fantasy"] {
+  --color-accent: #f59e0b;
+  --color-accent-dim: rgba(245, 158, 11, 0.1);
+}
+
+[data-theme="scifi"] {
+  --color-accent: #06b6d4;
+  --color-accent-dim: rgba(6, 182, 212, 0.1);
+}
+
+[data-theme="noir"] {
+  --color-accent: #a78bfa;
+  --color-accent-dim: rgba(167, 139, 250, 0.1);
+}
+
+/* Global defaults */
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Narrative text styling */
+.narrative-text {
+  font-size: 1rem;
+  line-height: 1.8;
+  letter-spacing: 0.01em;
+}
+
+/* Text adventure terminal cursor */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Smooth scroll for narrative viewport */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a3a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a4a;
+}
+
+/* Scene transition animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Glow effect for important elements */
+.glow-amber {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+}
+
+/* Selection styling */
+::selection {
+  background-color: rgba(245, 158, 11, 0.3);
+  color: white;
+}
