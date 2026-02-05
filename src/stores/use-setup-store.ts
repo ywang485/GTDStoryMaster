@@ -95,7 +95,7 @@ export const useSetupStore = create<SetupState>()(
             };
           }
 
-          if (config.storyWorld && state.storyWorld === null) {
+          if (config.storyWorld && (state.storyWorld === null || state.storyWorld.description === undefined)) {
             if ("preset" in config.storyWorld) {
               const preset = getPresetById(config.storyWorld.preset);
               if (preset) {
