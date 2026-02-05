@@ -5,11 +5,14 @@ import { persist } from "zustand/middleware";
 import type { PlayerProfile } from "@/types/player";
 import type { StoryWorld } from "@/types/storyworld";
 import type { Task } from "@/types/task";
+import type { AdventurerConfig } from "@/types/config";
+import { getPresetById, createCustomWorld } from "@/lib/storyworlds";
 
 interface SetupState {
   profile: PlayerProfile;
   storyWorld: StoryWorld | null;
   tasks: Task[];
+  configApplied: boolean;
 
   setProfile: (profile: Partial<PlayerProfile>) => void;
   setStoryWorld: (world: StoryWorld) => void;
@@ -20,6 +23,7 @@ interface SetupState {
   setTasks: (tasks: Task[]) => void;
   resetSetup: () => void;
   isSetupComplete: () => boolean;
+  applyConfig: (config: AdventurerConfig) => void;
 }
 
 const defaultProfile: PlayerProfile = {
@@ -38,6 +42,7 @@ export const useSetupStore = create<SetupState>()(
       profile: defaultProfile,
       storyWorld: null,
       tasks: [],
+      configApplied: false,
 
       setProfile: (updates) =>
         set((state) => ({
@@ -79,7 +84,48 @@ export const useSetupStore = create<SetupState>()(
           profile: defaultProfile,
           storyWorld: null,
           tasks: [],
+          configApplied: false,
         }),
+
+      applyConfig: (config) => {
+        set((state) => {
+          const updates: Partial<SetupState> = { configApplied: true };
+
+          // Apply profile fields (merge onto defaults, don't overwrite localStorage values
+          // if the user has already edited them in a previous session)
+          if (config.profile && state.profile.name === "") {
+            updates.profile = {
+              ...defaultProfile,
+              ...config.profile,
+            };
+          }
+
+          // Apply storyworld
+          if (config.storyWorld && state.storyWorld === null) {
+            if (config.storyWorld.preset !== "custom") {
+              const preset = getPresetById(config.storyWorld.preset);
+              if (preset) {
+                updates.storyWorld = preset;
+              }
+            } else if ("name" in config.storyWorld) {
+              updates.storyWorld = createCustomWorld(
+                config.storyWorld.name,
+                config.storyWorld.description,
+                config.storyWorld.tone ?? "Adventurous",
+                config.storyWorld.ipReference,
+              );
+              if (config.storyWorld.themes?.length) {
+                updates.storyWorld = {
+                  ...updates.storyWorld!,
+                  themes: config.storyWorld.themes,
+                };
+              }
+            }
+          }
+
+          return updates;
+        });
+      },
 
       isSetupComplete: () => {
         const { profile, storyWorld, tasks } = get();
