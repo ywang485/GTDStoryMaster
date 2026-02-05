@@ -76,6 +76,9 @@ function SetupWizard() {
 
   const handleBeginAdventure = () => {
     if (isSetupComplete()) {
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+      }
       router.push("/setup/prepare");
     }
   };
