@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSetupStore } from "@/stores/use-setup-store";
-import { storyWorldPresets, createCustomWorld } from "@/lib/storyworlds";
+import { storyWorldPresets } from "@/lib/storyworlds";
 import { cn } from "@/lib/utils/cn";
 
 export function StoryWorldPicker() {
@@ -10,8 +10,6 @@ export function StoryWorldPicker() {
   const [isCustom, setIsCustom] = useState(false);
   const [customName, setCustomName] = useState("");
   const [customDesc, setCustomDesc] = useState("");
-  const [customTone, setCustomTone] = useState("");
-  const [customIP, setCustomIP] = useState("");
 
   const handleSelectPreset = (preset: (typeof storyWorldPresets)[number]) => {
     setIsCustom(false);
@@ -20,13 +18,11 @@ export function StoryWorldPicker() {
 
   const handleCustomSubmit = () => {
     if (customName.trim() && customDesc.trim()) {
-      const world = createCustomWorld(
-        customName,
-        customDesc,
-        customTone || "Adventurous",
-        customIP || undefined,
-      );
-      setStoryWorld(world);
+      setStoryWorld({
+        id: `custom-${Date.now()}`,
+        name: customName,
+        description: customDesc,
+      });
     }
   };
 
@@ -54,17 +50,7 @@ export function StoryWorldPicker() {
             )}
           >
             <h3 className="font-bold text-gray-100 mb-1">{preset.name}</h3>
-            <p className="text-sm text-gray-400 mb-2">{preset.description}</p>
-            <div className="flex flex-wrap gap-1">
-              {preset.themes.slice(0, 3).map((theme) => (
-                <span
-                  key={theme}
-                  className="text-xs px-2 py-0.5 rounded bg-gray-800 text-gray-400"
-                >
-                  {theme}
-                </span>
-              ))}
-            </div>
+            <p className="text-sm text-gray-400">{preset.description}</p>
           </button>
         ))}
       </div>
@@ -95,42 +81,15 @@ export function StoryWorldPicker() {
 
             <div className="space-y-2">
               <label className="block text-sm text-gray-300">
-                Description & Setting
+                Description
               </label>
               <textarea
                 value={customDesc}
                 onChange={(e) => setCustomDesc(e.target.value)}
-                placeholder="Describe the world, its rules, atmosphere, and setting..."
-                rows={3}
+                placeholder="Describe the world, its setting, tone, rules, atmosphere... Include the name of any well-known IP if this is fan fiction (e.g., the world of Harry Potter)."
+                rows={4}
                 className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-gray-100 placeholder:text-gray-600 focus:border-amber-500 focus:outline-none resize-none"
               />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="block text-sm text-gray-300">Tone</label>
-                <input
-                  type="text"
-                  value={customTone}
-                  onChange={(e) => setCustomTone(e.target.value)}
-                  placeholder="e.g., Whimsical and mysterious"
-                  className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-gray-100 placeholder:text-gray-600 focus:border-amber-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm text-gray-300">
-                  IP Reference{" "}
-                  <span className="text-gray-500">(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={customIP}
-                  onChange={(e) => setCustomIP(e.target.value)}
-                  placeholder="e.g., Harry Potter, Star Wars"
-                  className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-gray-100 placeholder:text-gray-600 focus:border-amber-500 focus:outline-none"
-                />
-              </div>
             </div>
 
             <button

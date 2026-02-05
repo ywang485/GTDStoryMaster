@@ -46,18 +46,11 @@ Generate a complete plot structure with:
     .join("\n");
 
   const user = `## Player Profile
-Name: ${profile.name} | Age: ${profile.age} | Gender: ${profile.gender}
-Personality: ${profile.personality}
-Hobbies: ${profile.hobbies.join(", ")}
-Core Values: ${profile.coreValues.join(", ")}
-Beliefs: ${profile.beliefSystems.join(", ")}
+Name: ${profile.name}
+${profile.description}
 
 ## Storyworld
 "${storyWorld.name}" - ${storyWorld.description}
-Setting: ${storyWorld.setting}
-Tone: ${storyWorld.tone}
-Themes: ${storyWorld.themes.join(", ")}
-${storyWorld.ipReference ? `IP Reference: ${storyWorld.ipReference} - Stay faithful to this world's lore and feel.` : ""}
 
 ## Optimized Task Sequence (in order)
 ${taskList}
