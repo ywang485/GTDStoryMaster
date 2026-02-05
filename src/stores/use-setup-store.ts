@@ -82,20 +82,17 @@ export const useSetupStore = create<SetupState>()(
         }),
 
       applyConfig: (config) => {
-        set((state) => {
+        set(() => {
           const updates: Partial<SetupState> = { configApplied: true };
 
-          // Apply profile fields (merge onto defaults, don't overwrite localStorage values
-          // if the user has already edited them in a previous session)
-          if (config.profile && (state.profile.name === "" || state.profile.description === "")) {
+          if (config.profile) {
             updates.profile = {
               ...defaultProfile,
-              ...state.profile,
               ...config.profile,
             };
           }
 
-          if (config.storyWorld && (state.storyWorld === null || state.storyWorld.description === undefined)) {
+          if (config.storyWorld) {
             if ("preset" in config.storyWorld) {
               const preset = getPresetById(config.storyWorld.preset);
               if (preset) {
@@ -125,6 +122,11 @@ export const useSetupStore = create<SetupState>()(
     }),
     {
       name: "gtd-setup-store",
+      partialize: (state) => ({
+        profile: state.profile,
+        storyWorld: state.storyWorld,
+        tasks: state.tasks,
+      }),
     },
   ),
 );
