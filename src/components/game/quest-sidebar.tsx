@@ -45,7 +45,7 @@ export function QuestSidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      {/*<div className="flex-1 overflow-y-auto p-4 space-y-3">
         {plotStructure ? (
           plotStructure.acts.map((act) => (
             <div key={act.actNumber}>
@@ -97,7 +97,7 @@ export function QuestSidebar({
             Quests will appear here once your adventure begins.
           </div>
         )}
-      </div>
+      </div>*/}
 
       <div className="p-4 border-t border-gray-800">
         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
