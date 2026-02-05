@@ -6,12 +6,7 @@
 export interface AdventurerConfig {
   profile?: {
     name?: string;
-    gender?: string;
-    age?: number;
-    personality?: string;
-    hobbies?: string[];
-    coreValues?: string[];
-    beliefSystems?: string[];
+    description?: string;
   };
   storyWorld?:
     | {

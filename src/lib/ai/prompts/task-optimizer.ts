@@ -59,10 +59,8 @@ Return the tasks reordered for optimal productivity, with rationale explaining t
     : "";
 
   const user = `## Player Profile
-Name: ${profile.name} | Age: ${profile.age} | Gender: ${profile.gender}
-Personality: ${profile.personality}
-Hobbies: ${profile.hobbies.join(", ")}
-Core Values: ${profile.coreValues.join(", ")}
+Name: ${profile.name}
+${profile.description}
 ${memoryContext}
 
 ## Storyworld

@@ -28,12 +28,7 @@ interface SetupState {
 
 const defaultProfile: PlayerProfile = {
   name: "",
-  gender: "",
-  age: 25,
-  personality: "",
-  hobbies: [],
-  coreValues: [],
-  beliefSystems: [],
+  description: "",
 };
 
 export const useSetupStore = create<SetupState>()(

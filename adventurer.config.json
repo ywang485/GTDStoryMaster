@@ -1,12 +1,7 @@
 {
   "profile": {
     "name": "Alex",
-    "gender": "non-binary",
-    "age": 28,
-    "personality": "Curious and analytical, loves deep dives into complex problems. Tends to procrastinate on administrative tasks but hyperfocuses on creative work.",
-    "hobbies": ["reading sci-fi", "hiking", "cooking", "board games"],
-    "coreValues": ["growth", "honesty", "creativity", "compassion"],
-    "beliefSystems": ["growth mindset", "stoicism", "effective altruism"]
+    "description": "28, non-binary. Curious and analytical, loves deep dives into complex problems. Tends to procrastinate on administrative tasks but hyperfocuses on creative work. Hobbies: reading sci-fi, hiking, cooking, board games. Core values: growth, honesty, creativity, compassion. Believes in growth mindset, stoicism, and effective altruism."
   },
   "storyWorld": {
     "preset": "fantasy-kingdom"
