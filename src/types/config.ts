@@ -1,5 +1,3 @@
-import type { StoryWorldPreset } from "./storyworld";
-
 /**
  * Shape of the adventurer.config.json file.
  * Both `profile` and `storyWorld` are optional — only provided fields
@@ -18,15 +16,11 @@ export interface AdventurerConfig {
   storyWorld?:
     | {
         /** Use a built-in preset by ID */
-        preset: StoryWorldPreset;
+        preset: string;
       }
     | {
-        /** Define a fully custom world */
-        preset: "custom";
+        /** Define a custom world inline */
         name: string;
         description: string;
-        tone?: string;
-        ipReference?: string;
-        themes?: string[];
       };
 }

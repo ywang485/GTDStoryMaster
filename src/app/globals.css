@@ -23,22 +23,6 @@
   --color-danger: #ef4444;
 }
 
-/* Storyworld theme overrides (future adaptive styling) */
-[data-theme="fantasy"] {
-  --color-accent: #f59e0b;
-  --color-accent-dim: rgba(245, 158, 11, 0.1);
-}
-
-[data-theme="scifi"] {
-  --color-accent: #06b6d4;
-  --color-accent-dim: rgba(6, 182, 212, 0.1);
-}
-
-[data-theme="noir"] {
-  --color-accent: #a78bfa;
-  --color-accent-dim: rgba(167, 139, 250, 0.1);
-}
-
 /* Global defaults */
 body {
   background-color: var(--color-bg);

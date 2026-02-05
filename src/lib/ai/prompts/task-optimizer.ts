@@ -67,10 +67,6 @@ ${memoryContext}
 
 ## Storyworld
 "${storyWorld.name}" - ${storyWorld.description}
-Setting: ${storyWorld.setting}
-Tone: ${storyWorld.tone}
-Themes: ${storyWorld.themes.join(", ")}
-${storyWorld.ipReference ? `IP Reference: ${storyWorld.ipReference}` : ""}
 
 ## Tasks to Optimize
 ${taskList}

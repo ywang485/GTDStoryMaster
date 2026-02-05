@@ -54,10 +54,6 @@ Beliefs: ${profile.beliefSystems.join(", ")}
 
 ## Storyworld
 "${storyWorld.name}" - ${storyWorld.description}
-Setting: ${storyWorld.setting}
-Tone: ${storyWorld.tone}
-Themes: ${storyWorld.themes.join(", ")}
-${storyWorld.ipReference ? `IP Reference: ${storyWorld.ipReference} - Stay faithful to this world's lore and feel.` : ""}
 
 ## Optimized Task Sequence (in order)
 ${taskList}

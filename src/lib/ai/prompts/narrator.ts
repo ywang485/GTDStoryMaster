@@ -18,9 +18,6 @@ You narrate an immersive, second-person text adventure ("You step into the chamb
 Title: "${plotStructure.title}"
 Premise: ${plotStructure.premise}
 World: "${storyWorld.name}" - ${storyWorld.description}
-Setting: ${storyWorld.setting}
-Tone: ${storyWorld.tone}
-${storyWorld.ipReference ? `IP: ${storyWorld.ipReference} - Stay faithful to this world's lore, characters, and atmosphere.` : ""}
 
 ## Player Character
 ${character ? `Name: ${character.characterName}

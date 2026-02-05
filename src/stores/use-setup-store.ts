@@ -6,7 +6,7 @@ import type { PlayerProfile } from "@/types/player";
 import type { StoryWorld } from "@/types/storyworld";
 import type { Task } from "@/types/task";
 import type { AdventurerConfig } from "@/types/config";
-import { getPresetById, createCustomWorld } from "@/lib/storyworlds";
+import { getPresetById } from "@/lib/storyworlds";
 
 interface SetupState {
   profile: PlayerProfile;
@@ -66,7 +66,6 @@ export const useSetupStore = create<SetupState>()(
       removeTask: (id) =>
         set((state) => ({
           tasks: state.tasks.filter((t) => t.id !== id),
-          // Also remove from dependencies
         })),
 
       reorderTasks: (fromIndex, toIndex) =>
@@ -100,26 +99,18 @@ export const useSetupStore = create<SetupState>()(
             };
           }
 
-          // Apply storyworld
           if (config.storyWorld && state.storyWorld === null) {
-            if (config.storyWorld.preset !== "custom") {
+            if ("preset" in config.storyWorld) {
               const preset = getPresetById(config.storyWorld.preset);
               if (preset) {
                 updates.storyWorld = preset;
               }
-            } else if ("name" in config.storyWorld) {
-              updates.storyWorld = createCustomWorld(
-                config.storyWorld.name,
-                config.storyWorld.description,
-                config.storyWorld.tone ?? "Adventurous",
-                config.storyWorld.ipReference,
-              );
-              if (config.storyWorld.themes?.length) {
-                updates.storyWorld = {
-                  ...updates.storyWorld!,
-                  themes: config.storyWorld.themes,
-                };
-              }
+            } else {
+              updates.storyWorld = {
+                id: `custom-${Date.now()}`,
+                name: config.storyWorld.name,
+                description: config.storyWorld.description,
+              };
             }
           }
 
