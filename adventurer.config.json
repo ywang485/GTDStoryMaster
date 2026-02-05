@@ -1,0 +1,14 @@
+{
+  "profile": {
+    "name": "Alex",
+    "gender": "non-binary",
+    "age": 28,
+    "personality": "Curious and analytical, loves deep dives into complex problems. Tends to procrastinate on administrative tasks but hyperfocuses on creative work.",
+    "hobbies": ["reading sci-fi", "hiking", "cooking", "board games"],
+    "coreValues": ["growth", "honesty", "creativity", "compassion"],
+    "beliefSystems": ["growth mindset", "stoicism", "effective altruism"]
+  },
+  "storyWorld": {
+    "preset": "fantasy-kingdom"
+  }
+}
