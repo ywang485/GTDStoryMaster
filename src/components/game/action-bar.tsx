@@ -1,22 +1,21 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { Scene } from "@/types/story";
 import type { Task } from "@/types/task";
 import { cn } from "@/lib/utils/cn";
 
 interface ActionBarProps {
-  currentScene: Scene | null;
   activeTask: Task | null;
   isStreaming: boolean;
   onAction: (type: string, content: string, taskId?: string) => void;
+  exampleResponses?: string[];
 }
 
 export function ActionBar({
-  currentScene,
   activeTask,
   isStreaming,
   onAction,
+  exampleResponses,
 }: ActionBarProps) {
   const [input, setInput] = useState("");
 
@@ -71,21 +70,21 @@ export function ActionBar({
         </div>
       )}
 
-      {currentScene && currentScene.suggestedChoices.length > 0 && (
+      {exampleResponses && exampleResponses.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {currentScene.suggestedChoices.map((choice, i) => (
+          {exampleResponses.map((response, i) => (
             <button
               key={i}
-              onClick={() => handleChoice(choice)}
+              onClick={() => handleChoice(response)}
               disabled={isStreaming}
               className={cn(
                 "px-3 py-1.5 text-sm rounded border transition-colors",
                 isStreaming
                   ? "border-gray-800 text-gray-600 cursor-not-allowed"
-                  : "border-gray-600 text-gray-300 hover:border-amber-500 hover:text-amber-400",
+                  : "border-amber-700/50 text-amber-300/80 hover:border-amber-500 hover:text-amber-400",
               )}
             >
-              {choice}
+              {response}
             </button>
           ))}
         </div>

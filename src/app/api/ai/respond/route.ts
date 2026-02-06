@@ -26,7 +26,20 @@ export async function POST(req: Request) {
     plotStructure: PlotStructure;
   };
 
+  // Build a minimal turn context for the narrator system prompt
+  const turnContext = {
+    turnNumber: 0,
+    currentScene,
+    tasksState: [],
+    plotSoFar: [],
+    playerInput: action.content,
+    environment: {
+      currentTime: new Date().toLocaleTimeString(),
+    },
+  };
+
   const systemPrompt = buildNarratorSystemPrompt(
+    turnContext,
     profile,
     character,
     storyWorld,

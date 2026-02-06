@@ -54,7 +54,8 @@ export function getCurrentScene(
 }
 
 /**
- * Returns the active task (first non-completed task in scene order).
+ * Returns the active task (first non-completed task in the current task order).
+ * Respects the task reordering from the AI's adjustedTaskOrder.
  */
 export function getActiveTask(
   tasks: Task[],
@@ -64,11 +65,13 @@ export function getActiveTask(
   if (!currentScene) return null;
 
   const completedSet = new Set(completedTaskIds);
+  const sceneTaskIds = new Set(currentScene.associatedTaskIds);
 
-  for (const taskId of currentScene.associatedTaskIds) {
-    if (!completedSet.has(taskId)) {
-      const task = tasks.find((t) => t.id === taskId);
-      if (task) return task;
+  // Iterate through tasks in their current order (respects reordering)
+  // Return the first task that belongs to this scene and isn't completed
+  for (const task of tasks) {
+    if (sceneTaskIds.has(task.id) && !completedSet.has(task.id)) {
+      return task;
     }
   }
 

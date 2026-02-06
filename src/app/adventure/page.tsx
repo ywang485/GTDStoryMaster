@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useGameStore } from "@/stores/use-game-store";
 import { useSetupStore } from "@/stores/use-setup-store";
@@ -14,6 +14,50 @@ import { getCurrentScene, getActiveTask } from "@/lib/engine/quest-tracker";
 import { processAction } from "@/lib/engine/game-manager";
 import { buildTurnContext, getCurrentEnvironment } from "@/lib/engine/context-builder";
 import type { NarrativeEntry } from "@/types/story";
+
+/**
+ * Extracts the story text from a streaming response.
+ * Handles the new STORY:/DATA: format for better streaming.
+ */
+function extractStoryText(rawText: string): string | null {
+  // New format: Look for "STORY: [text]"
+  const storyMatch = rawText.match(/STORY:\s*([\s\S]*?)(?=\nDATA:|$)/);
+  if (storyMatch) {
+    return storyMatch[1].trim();
+  }
+
+  // Fallback: Handle old JSON format for backward compatibility
+  let text = rawText.trim();
+  if (text.startsWith('```')) {
+    text = text.replace(/^```(?:json)?\s*\n?/, '');
+    text = text.replace(/\n?```\s*$/, '');
+  }
+
+  // Try to parse as complete JSON
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed.storyText) {
+      return parsed.storyText;
+    }
+  } catch {
+    // JSON is incomplete, try regex extraction
+  }
+
+  // Look for "storyText": "..." pattern in JSON
+  const jsonMatch = text.match(/"storyText"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/)
+  if (jsonMatch) {
+    try {
+      return JSON.parse(`"${jsonMatch[1]}"`);
+    } catch {
+      return jsonMatch[1]
+        .replace(/\\n/g, '\n')
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\');
+    }
+  }
+
+  return null;
+}
 
 function AdventureGame() {
   const router = useRouter();
@@ -31,6 +75,7 @@ function AdventureGame() {
     completeTask,
     skipTask,
     updateTaskStatus,
+    reorderTasks,
     setCurrentScene,
     incrementTurn,
     setEnvironment,
@@ -40,6 +85,8 @@ function AdventureGame() {
   const { profile, storyWorld } = useSetupStore();
   const { isStreaming, setIsStreaming, sidebarOpen } = useUIStore();
   const [streamingText, setStreamingText] = useState("");
+  const [exampleResponses, setExampleResponses] = useState<string[]>([]);
+  const hasInitialized = useRef(false);
 
   // Redirect if not in playing state
   useEffect(() => {
@@ -70,8 +117,10 @@ function AdventureGame() {
       plotStructure &&
       currentScene &&
       narrativeLog.length === 0 &&
-      !isStreaming
+      !isStreaming &&
+      !hasInitialized.current
     ) {
+      hasInitialized.current = true;
       handleNarrate("begin the adventure");
     }
     // Only run on first mount when there's no narrative yet
@@ -84,6 +133,7 @@ function AdventureGame() {
 
       setIsStreaming(true);
       setStreamingText("");
+      setExampleResponses([]);
 
       const env = getCurrentEnvironment(environment.mood, environment.weather);
       setEnvironment(env);
@@ -117,24 +167,95 @@ function AdventureGame() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullText = "";
+        let finalResponse: any = null;
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+
           const chunk = decoder.decode(value, { stream: true });
           fullText += chunk;
-          setStreamingText(fullText);
+
+          // Extract and stream the storyText field as it's being generated
+          const extracted = extractStoryText(fullText);
+          if (extracted) {
+            setStreamingText(extracted);
+          }
         }
 
-        // Add to narrative log
-        const narratorEntry: NarrativeEntry = {
-          id: `narrator-${Date.now()}`,
-          role: "narrator",
-          content: fullText,
-          timestamp: Date.now(),
-          sceneId: currentScene.id,
-        };
-        addNarrativeEntry(narratorEntry);
+        // Parse the final complete response
+        // Check for new STORY:/DATA: format
+        const storyMatch = fullText.match(/STORY:\s*([\s\S]*?)(?=\nDATA:|$)/);
+        const dataMatch = fullText.match(/DATA:\s*({[\s\S]*})/);
+
+        let storyText = "";
+
+        if (storyMatch && dataMatch) {
+          // New format
+          storyText = storyMatch[1].trim();
+          try {
+            const data = JSON.parse(dataMatch[1].trim());
+            finalResponse = {
+              storyText,
+              ...data
+            };
+            console.log("Final parsed response (new format):", finalResponse);
+          } catch (e) {
+            console.error("Failed to parse DATA JSON:", dataMatch[1].substring(0, 200), e);
+          }
+        } else {
+          // Fallback: Old JSON format
+          let jsonText = fullText.trim();
+          if (jsonText.startsWith('```')) {
+            jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '');
+            jsonText = jsonText.replace(/\n?```\s*$/, '');
+          }
+
+          try {
+            const parsed = JSON.parse(jsonText);
+            finalResponse = parsed;
+            console.log("Final parsed response (old format):", finalResponse);
+          } catch (e) {
+            console.error("Failed to parse final JSON:", jsonText.substring(0, 200), e);
+          }
+        }
+
+        // Process the final response
+        if (finalResponse && finalResponse.storyText) {
+          // Add to narrative log
+          const narratorEntry: NarrativeEntry = {
+            id: `narrator-${Date.now()}`,
+            role: "narrator",
+            content: finalResponse.storyText,
+            timestamp: Date.now(),
+            sceneId: currentScene.id,
+            productivityObservation: finalResponse.productivityObservation,
+            explanation: finalResponse.explanation,
+          };
+          addNarrativeEntry(narratorEntry);
+          console.log("Added narrative entry:", narratorEntry);
+
+          // Apply task status updates from the AI response
+          if (finalResponse.updatedTaskCompletionState) {
+            for (const taskUpdate of finalResponse.updatedTaskCompletionState) {
+              updateTaskStatus(taskUpdate.taskId, taskUpdate.status);
+            }
+          }
+
+          // Apply task reordering if provided
+          if (finalResponse.adjustedTaskOrder && finalResponse.adjustedTaskOrder.length > 0) {
+            console.log("Reordering tasks based on AI suggestion:", finalResponse.adjustedTaskOrder);
+            reorderTasks(finalResponse.adjustedTaskOrder);
+          }
+
+          // Store example responses for the action bar
+          if (finalResponse.exampleResponses && finalResponse.exampleResponses.length > 0) {
+            setExampleResponses(finalResponse.exampleResponses);
+          }
+        } else {
+          console.error("No valid final response found");
+        }
+
         incrementTurn();
         setStreamingText("");
       } catch (error) {
@@ -289,10 +410,10 @@ function AdventureGame() {
             streamingText={streamingText}
           />
           <ActionBar
-            currentScene={currentScene}
             activeTask={activeTask}
             isStreaming={isStreaming}
             onAction={handleAction}
+            exampleResponses={exampleResponses}
           />
         </div>
 

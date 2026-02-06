@@ -28,4 +28,6 @@ export interface NarrativeEntry {
   content: string;
   timestamp: number;
   sceneId: string;
+  productivityObservation?: string;
+  explanation?: string;
 }

@@ -22,6 +22,7 @@ export async function POST(req: Request) {
     };
 
   const systemPrompt = buildNarratorSystemPrompt(
+    turnContext,
     profile,
     character,
     storyWorld,
@@ -30,6 +31,8 @@ export async function POST(req: Request) {
 
   const userPrompt = buildTurnUserPrompt(turnContext);
 
+  // Use streamText and let the AI return JSON
+  // The narrator prompt already specifies JSON output format
   const result = streamText({
     model: getNarrationModel(),
     temperature: aiConfig.narrationTemperature,
