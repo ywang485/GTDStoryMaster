@@ -48,7 +48,7 @@ STORY: [your narrative story text here]
 
 Then, output the structured data as JSON prefixed with "DATA:" on its own line:
 DATA: {
-	"updatedTaskCompletionState": [{"taskId": "task-id", "status": "pending"|"active"|"completed"|"skipped"}, ...],
+	"updatedTaskCompletionState": [{"taskId": "task-id", "status": "pending"|"active"|"completed"|"skipped"}, "metaphor": "metaphoric activity set in the storyworld", ...],
 	"adjustedTaskOrder": ["task-id-1", "task-id-2", "task-id-3"] (OPTIONAL: array of task IDs in new optimal order. Only include if task reordering would improve productivity. Use the exact task IDs from the task list.),
 	"productivityObservation": (observation on the user's behavior that could be useful for future conversations),
   "exampleResponses": [(several example responses the user could give based on the current story and task progress)]
@@ -57,7 +57,7 @@ DATA: {
 
 Example:
 STORY: 正午的阳光透过你公寓的落地窗洒进来,...
-DATA: {"updatedTaskCompletionState": [{"taskId": "task-1", "status": "completed"}], "productivityObservation": "用户完成了第一个任务", "explanation": "故事开始，主角接受了第一个任务"}
+DATA: {"updatedTaskCompletionState": [{"taskId": "task-1", "status": "completed", "metaphor": "defeat boss", ...}], "productivityObservation": "用户完成了第一个任务", "explanation": "故事开始，主角接受了第一个任务"}
 
 Important notes about adjustedTaskOrder:
 - Use the exact task IDs from the provided task list

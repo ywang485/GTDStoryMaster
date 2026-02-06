@@ -64,6 +64,16 @@ function NarrativeBlock({ entry }: { entry: NarrativeEntry }) {
         </span>
       )}
       {entry.content}
+      {entry.role === "narrator" && entry.rawData && (
+        <details className="mt-2">
+          <summary className="text-gray-600 text-xs cursor-pointer hover:text-gray-400 transition-colors">
+            Raw JSON
+          </summary>
+          <pre className="mt-1 p-2 bg-gray-900/50 rounded text-gray-500 text-xs overflow-x-auto whitespace-pre-wrap break-all">
+            {JSON.stringify(entry.rawData, null, 2)}
+          </pre>
+        </details>
+      )}
     </div>
   );
 }

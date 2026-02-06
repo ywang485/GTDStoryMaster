@@ -223,6 +223,7 @@ function AdventureGame() {
         // Process the final response
         if (finalResponse && finalResponse.storyText) {
           // Add to narrative log
+          const { storyText: _, ...rawData } = finalResponse;
           const narratorEntry: NarrativeEntry = {
             id: `narrator-${Date.now()}`,
             role: "narrator",
@@ -231,6 +232,7 @@ function AdventureGame() {
             sceneId: currentScene.id,
             productivityObservation: finalResponse.productivityObservation,
             explanation: finalResponse.explanation,
+            rawData,
           };
           addNarrativeEntry(narratorEntry);
           console.log("Added narrative entry:", narratorEntry);

@@ -30,4 +30,5 @@ export interface NarrativeEntry {
   sceneId: string;
   productivityObservation?: string;
   explanation?: string;
+  rawData?: Record<string, unknown>;
 }
