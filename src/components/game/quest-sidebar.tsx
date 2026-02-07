@@ -56,7 +56,10 @@ export function QuestSidebar({
                 task.status === "active" && "text-black font-normal",
               )}
             >
-              <span className="font-mono text-gray-400">
+              <span className={cn(
+                "font-mono",
+                completedSet.has(task.id) ? "text-black" : "text-gray-400",
+              )}>
                 {completedSet.has(task.id) ? (
                   "\u2713"
                 ) : task.status === "active" ? (
