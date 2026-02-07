@@ -54,7 +54,7 @@ DATA: {
 	"adjustedTaskOrder": ["task-id-1", "task-id-2", "task-id-3"] (OPTIONAL: array of task IDs in new optimal order. Only include if task reordering would improve productivity. Use the exact task IDs from the task list.),
 	"productivityObservation": (observation on the user's behavior that could be useful for future conversations),
   "exampleResponses": [(several example responses the user could give based on the current story and task progress)],
-  "execution": (a string of html/javascript/css code to present the story, facilitate the task, and help with productivity),
+  "execution": (OPTIONAL, a string of html/javascript/css code to present the story, facilitate the task, and help with productivity),
 	"explanation": (concise explanation of the current story in 1-2 sentences)
 }
 
@@ -78,6 +78,7 @@ IMPORTANT: The responses should be describing what happens in the real-world ins
 Examples: "I fell asleep in the middle of reading emails", "prototyping went great!", "I spent 3 hours on this but not much progress", etc.
 
 Notes about execution:
+- Optional, only when you are thinking of something totally different from the generated code from previours turn.
 - First come up with the content and function of the webpage to facilitate storytelling, task execution and productivity, then generate css stylization to be thematic with the story to provide an immersive narrative experience.
 - The generated page runs in a popup window. To send a response back to the main story app, use: new BroadcastChannel("story-execution").postMessage({ type: "execution-response", content: "your message here" })
 - Use this to report meaningful user actions back to the story, e.g. when a pomodoro timer completes, send "I completed a 25-minute focus session"; when a draft is saved, send "I finished writing my draft", etc.

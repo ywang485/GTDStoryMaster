@@ -194,7 +194,19 @@ function AdventureGame() {
           // New format
           storyText = storyMatch[1].trim();
           try {
-            const data = JSON.parse(dataMatch[1].trim());
+            // LLMs sometimes output literal control characters (tabs, newlines) inside JSON string values.
+            // Only escape control chars inside quoted strings, not structural whitespace.
+            const sanitizedJson = dataMatch[1].trim().replace(/"(?:[^"\\]|\\.)*"/g, (str) =>
+              str.replace(/[\x00-\x1f\x7f]/g, (ch) => {
+                switch (ch) {
+                  case '\n': return '\\n';
+                  case '\r': return '\\r';
+                  case '\t': return '\\t';
+                  default: return '';
+                }
+              })
+            );
+            const data = JSON.parse(sanitizedJson);
             finalResponse = {
               storyText,
               ...data
