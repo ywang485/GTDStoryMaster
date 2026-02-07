@@ -44,17 +44,17 @@ export function TaskEditor() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-amber-400 mb-1">
+        <h2 className="text-lg font-light text-black mb-1">
           Your Quests for Today
         </h2>
-        <p className="text-gray-400 text-sm">
+        <p className="text-gray-400 text-sm font-light">
           Add the tasks you need to accomplish. The Story Master will optimize
           their order and weave them into your adventure.
         </p>
       </div>
 
       {tasks.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {tasks.map((task, index) => (
             <TaskRow
               key={task.id}
@@ -71,21 +71,21 @@ export function TaskEditor() {
       <div className="flex gap-3">
         <button
           onClick={handleAddTask}
-          className="px-4 py-2 border border-gray-600 text-gray-300 rounded hover:border-amber-500 hover:text-amber-400 transition-colors text-sm"
+          className="px-4 py-2 border border-gray-200 text-gray-500 rounded-none hover:border-black hover:text-black transition-colors text-sm font-light"
         >
           + Add Task
         </button>
         <button
           onClick={() => setShowBulk(!showBulk)}
-          className="px-4 py-2 border border-gray-600 text-gray-300 rounded hover:border-amber-500 hover:text-amber-400 transition-colors text-sm"
+          className="px-4 py-2 border border-gray-200 text-gray-500 rounded-none hover:border-black hover:text-black transition-colors text-sm font-light"
         >
           Paste Multiple
         </button>
       </div>
 
       {showBulk && (
-        <div className="space-y-3 p-4 border border-gray-700 rounded-lg bg-gray-900">
-          <label className="block text-sm text-gray-300">
+        <div className="space-y-3 p-4 border border-gray-200">
+          <label className="block text-sm text-gray-500">
             Paste your task list (one per line)
           </label>
           <textarea
@@ -93,12 +93,12 @@ export function TaskEditor() {
             onChange={(e) => setBulkInput(e.target.value)}
             placeholder={"Write project report\nReview pull requests\nEmail client updates\nClean up test suite"}
             rows={6}
-            className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-gray-100 placeholder:text-gray-600 focus:border-amber-500 focus:outline-none resize-none font-mono text-sm"
+            className="w-full bg-white border border-gray-200 rounded-none px-3 py-2 text-black placeholder:text-gray-300 focus:border-black focus:outline-none resize-none font-mono text-sm"
           />
           <button
             onClick={handleBulkAdd}
             disabled={!bulkInput.trim()}
-            className="px-4 py-2 bg-amber-600 text-gray-950 font-medium rounded hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
+            className="px-4 py-2 bg-black text-white font-light rounded-none hover:bg-gray-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
           >
             Add All
           </button>
@@ -106,7 +106,7 @@ export function TaskEditor() {
       )}
 
       {tasks.length === 0 && (
-        <div className="text-center py-8 text-gray-500 border border-dashed border-gray-700 rounded-lg">
+        <div className="text-center py-8 text-gray-400 border border-dashed border-gray-200 font-light">
           No tasks yet. Add tasks to begin your adventure.
         </div>
       )}
@@ -130,9 +130,9 @@ function TaskRow({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="border border-gray-700 rounded-lg bg-gray-900 p-3 space-y-3">
+    <div className="border border-gray-200 p-3 space-y-3">
       <div className="flex items-center gap-3">
-        <span className="text-gray-500 text-sm font-mono w-6 text-right">
+        <span className="text-gray-400 text-sm font-mono w-6 text-right">
           {index + 1}.
         </span>
         <input
@@ -140,14 +140,14 @@ function TaskRow({
           value={task.title}
           onChange={(e) => onUpdate({ title: e.target.value })}
           placeholder="What needs to be done?"
-          className="flex-1 bg-transparent border-none text-gray-100 placeholder:text-gray-600 focus:outline-none"
+          className="flex-1 bg-transparent border-none text-black placeholder:text-gray-300 focus:outline-none font-light"
         />
         <select
           value={task.priority}
           onChange={(e) =>
             onUpdate({ priority: e.target.value as TaskPriority })
           }
-          className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-gray-300"
+          className="bg-white border border-gray-200 rounded-none px-2 py-1 text-xs text-gray-500"
         >
           <option value="low">Low</option>
           <option value="medium">Medium</option>
@@ -156,13 +156,13 @@ function TaskRow({
         </select>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-gray-500 hover:text-gray-300 text-sm"
+          className="text-gray-400 hover:text-black text-sm transition-colors"
         >
           {expanded ? "Less" : "More"}
         </button>
         <button
           onClick={onRemove}
-          className="text-gray-500 hover:text-red-400 transition-colors"
+          className="text-gray-300 hover:text-black transition-colors"
         >
           &times;
         </button>
@@ -177,7 +177,7 @@ function TaskRow({
               onChange={(e) => onUpdate({ description: e.target.value })}
               placeholder="Optional details about this task..."
               rows={2}
-              className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600 focus:border-amber-500 focus:outline-none resize-none"
+              className="w-full bg-white border border-gray-200 rounded-none px-3 py-2 text-sm text-black placeholder:text-gray-300 focus:border-black focus:outline-none resize-none font-light"
             />
           </div>
 
@@ -198,7 +198,7 @@ function TaskRow({
                 }
                 placeholder="30"
                 min={1}
-                className="w-full bg-gray-950 border border-gray-700 rounded px-2 py-1 text-sm text-gray-100 focus:border-amber-500 focus:outline-none"
+                className="w-full bg-white border border-gray-200 rounded-none px-2 py-1 text-sm text-black focus:border-black focus:outline-none"
               />
             </div>
             <div className="space-y-1">
@@ -217,7 +217,7 @@ function TaskRow({
                 }
                 min={1}
                 max={10}
-                className="w-full bg-gray-950 border border-gray-700 rounded px-2 py-1 text-sm text-gray-100 focus:border-amber-500 focus:outline-none"
+                className="w-full bg-white border border-gray-200 rounded-none px-2 py-1 text-sm text-black focus:border-black focus:outline-none"
               />
             </div>
             <div className="space-y-1">
@@ -236,7 +236,7 @@ function TaskRow({
                 }
                 min={1}
                 max={10}
-                className="w-full bg-gray-950 border border-gray-700 rounded px-2 py-1 text-sm text-gray-100 focus:border-amber-500 focus:outline-none"
+                className="w-full bg-white border border-gray-200 rounded-none px-2 py-1 text-sm text-black focus:border-black focus:outline-none"
               />
             </div>
           </div>
@@ -251,7 +251,7 @@ function TaskRow({
                 .map((t) => (
                   <label
                     key={t.id}
-                    className="flex items-center gap-1 text-xs text-gray-400"
+                    className="flex items-center gap-1 text-xs text-gray-500"
                   >
                     <input
                       type="checkbox"
@@ -262,7 +262,7 @@ function TaskRow({
                           : task.dependencies.filter((d) => d !== t.id);
                         onUpdate({ dependencies: deps });
                       }}
-                      className="rounded border-gray-600"
+                      className="rounded-none border-gray-300"
                     />
                     {t.title || `Task ${allTasks.indexOf(t) + 1}`}
                   </label>
@@ -277,7 +277,7 @@ function TaskRow({
               value={task.category ?? ""}
               onChange={(e) => onUpdate({ category: e.target.value })}
               placeholder="e.g., coding, writing, admin"
-              className="w-full bg-gray-950 border border-gray-700 rounded px-2 py-1 text-sm text-gray-100 placeholder:text-gray-600 focus:border-amber-500 focus:outline-none"
+              className="w-full bg-white border border-gray-200 rounded-none px-2 py-1 text-sm text-black placeholder:text-gray-300 focus:border-black focus:outline-none"
             />
           </div>
         </div>
