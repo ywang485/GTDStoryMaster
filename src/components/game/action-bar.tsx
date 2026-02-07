@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import type { Task } from "@/types/task";
 import { cn } from "@/lib/utils/cn";
 
@@ -9,6 +9,8 @@ interface ActionBarProps {
   isStreaming: boolean;
   onAction: (type: string, content: string, taskId?: string) => void;
   exampleResponses?: string[];
+  pendingInput?: string;
+  onPendingInputConsumed?: () => void;
 }
 
 export function ActionBar({
@@ -16,8 +18,18 @@ export function ActionBar({
   isStreaming,
   onAction,
   exampleResponses,
+  pendingInput,
+  onPendingInputConsumed,
 }: ActionBarProps) {
   const [input, setInput] = useState("");
+
+  // Prefill input from external sources (e.g. execution popup postMessage)
+  useEffect(() => {
+    if (pendingInput) {
+      setInput(pendingInput);
+      onPendingInputConsumed?.();
+    }
+  }, [pendingInput, onPendingInputConsumed]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();

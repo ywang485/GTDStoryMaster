@@ -254,6 +254,24 @@ function AdventureGame() {
           if (finalResponse.exampleResponses && finalResponse.exampleResponses.length > 0) {
             setExampleResponses(finalResponse.exampleResponses);
           }
+
+          // Open execution HTML in a new browser window
+          if (finalResponse.execution) {
+            const popup = window.open("", "_blank", "width=1024,height=768");
+            if (popup) {
+              popup.document.open();
+              popup.document.write(finalResponse.execution);
+              popup.document.close();
+
+              // Poll for popup close and prefill input
+              const closePoller = setInterval(() => {
+                if (popup.closed) {
+                  clearInterval(closePoller);
+                  setPendingInput("I closed the activity window");
+                }
+              }, 500);
+            }
+          }
         } else {
           console.error("No valid final response found");
         }
@@ -362,6 +380,21 @@ function AdventureGame() {
     ],
   );
 
+  // Listen for messages from execution popup windows via BroadcastChannel
+  const [pendingInput, setPendingInput] = useState("");
+  useEffect(() => {
+    const channel = new BroadcastChannel("story-execution");
+    channel.onmessage = (event) => {
+      if (
+        event.data?.type === "execution-response" &&
+        typeof event.data.content === "string"
+      ) {
+        setPendingInput(event.data.content);
+      }
+    };
+    return () => channel.close();
+  }, []);
+
   if (!plotStructure || phase === "setup") {
     return null;
   }
@@ -416,6 +449,8 @@ function AdventureGame() {
             isStreaming={isStreaming}
             onAction={handleAction}
             exampleResponses={exampleResponses}
+            pendingInput={pendingInput}
+            onPendingInputConsumed={() => setPendingInput("")}
           />
         </div>
 

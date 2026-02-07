@@ -31,6 +31,12 @@ export const narrateResponseSchema = z.object({
     .describe(
       "Several example responses the user could give based on the current story and task progress",
     ),
+  execution: z
+    .string()
+    .optional()
+    .describe(
+      "A string of HTML/JavaScript/CSS code to present the story, facilitate the current task, and help with productivity",
+    ),
   explanation: z
     .string()
     .describe("Concise explanation of the current story in 1-2 sentences"),
