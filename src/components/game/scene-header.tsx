@@ -13,22 +13,20 @@ export function SceneHeader({ scene, environment, actTitle }: SceneHeaderProps) 
   if (!scene) return null;
 
   return (
-    <div className="border-b border-gray-800 bg-gray-950/80 px-6 py-3">
-      <div className="flex items-center justify-between">
+    <div className="border-b border-gray-200 bg-white px-8 py-3">
+      <div className="flex items-center justify-between max-w-3xl mx-auto">
         <div>
           {actTitle && (
-            <span className="text-xs text-gray-500 uppercase tracking-wider">
+            <span className="text-xs text-gray-400 uppercase tracking-widest">
               {actTitle}
             </span>
           )}
-          <h2 className="text-lg font-bold text-amber-400">{scene.title}</h2>
+          <h2 className="text-base font-light text-black">{scene.title}</h2>
         </div>
-        <div className="flex items-center gap-4 text-xs text-gray-500">
+        <div className="flex items-center gap-4 text-xs text-gray-400 font-mono">
           <span>{environment.currentTime}</span>
           {environment.weather && <span>{environment.weather}</span>}
-          {environment.mood && (
-            <span className="text-amber-400/60">{environment.mood}</span>
-          )}
+          {environment.mood && <span>{environment.mood}</span>}
         </div>
       </div>
     </div>

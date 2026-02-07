@@ -29,10 +29,10 @@ export function StoryWorldPicker() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-amber-400 mb-1">
+        <h2 className="text-lg font-light text-black mb-1">
           Choose Your World
         </h2>
-        <p className="text-gray-400 text-sm">
+        <p className="text-gray-400 text-sm font-light">
           Select a storyworld for your adventure, or create your own.
         </p>
       </div>
@@ -43,44 +43,44 @@ export function StoryWorldPicker() {
             key={preset.id}
             onClick={() => handleSelectPreset(preset)}
             className={cn(
-              "text-left p-4 rounded-lg border transition-all",
+              "text-left p-4 border transition-all rounded-none",
               storyWorld?.id === preset.id && !isCustom
-                ? "border-amber-500 bg-amber-500/10"
-                : "border-gray-700 bg-gray-900 hover:border-gray-500",
+                ? "border-black"
+                : "border-gray-200 hover:border-gray-400",
             )}
           >
-            <h3 className="font-bold text-gray-100 mb-1">{preset.name}</h3>
-            <p className="text-sm text-gray-400">{preset.description}</p>
+            <h3 className="text-sm text-black mb-1">{preset.name}</h3>
+            <p className="text-xs text-gray-400 font-light">{preset.description}</p>
           </button>
         ))}
       </div>
 
-      <div className="border-t border-gray-800 pt-4">
+      <div className="border-t border-gray-200 pt-4">
         <button
           onClick={() => setIsCustom(!isCustom)}
           className={cn(
-            "text-sm font-medium transition-colors",
-            isCustom ? "text-amber-400" : "text-gray-400 hover:text-gray-200",
+            "text-sm font-light transition-colors",
+            isCustom ? "text-black" : "text-gray-400 hover:text-black",
           )}
         >
           {isCustom ? "- Hide custom world builder" : "+ Create a custom world"}
         </button>
 
         {isCustom && (
-          <div className="mt-4 space-y-4 p-4 rounded-lg border border-gray-700 bg-gray-900">
+          <div className="mt-4 space-y-4 p-4 border border-gray-200">
             <div className="space-y-2">
-              <label className="block text-sm text-gray-300">World Name</label>
+              <label className="block text-sm text-gray-500">World Name</label>
               <input
                 type="text"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
                 placeholder="e.g., The Wizarding World"
-                className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-gray-100 placeholder:text-gray-600 focus:border-amber-500 focus:outline-none"
+                className="w-full bg-white border border-gray-200 rounded-none px-3 py-2 text-black placeholder:text-gray-300 focus:border-black focus:outline-none font-light"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm text-gray-300">
+              <label className="block text-sm text-gray-500">
                 Description
               </label>
               <textarea
@@ -88,14 +88,14 @@ export function StoryWorldPicker() {
                 onChange={(e) => setCustomDesc(e.target.value)}
                 placeholder="Describe the world, its setting, tone, rules, atmosphere... Include the name of any well-known IP if this is fan fiction (e.g., the world of Harry Potter)."
                 rows={4}
-                className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-gray-100 placeholder:text-gray-600 focus:border-amber-500 focus:outline-none resize-none"
+                className="w-full bg-white border border-gray-200 rounded-none px-3 py-2 text-black placeholder:text-gray-300 focus:border-black focus:outline-none resize-none font-light"
               />
             </div>
 
             <button
               onClick={handleCustomSubmit}
               disabled={!customName.trim() || !customDesc.trim()}
-              className="px-4 py-2 bg-amber-600 text-gray-950 font-medium rounded hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 bg-black text-white font-light rounded-none hover:bg-gray-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
             >
               Use This World
             </button>

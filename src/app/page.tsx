@@ -93,51 +93,51 @@ function SetupWizard() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-950">
+    <div className="min-h-screen flex flex-col bg-white">
       {/* Header */}
-      <header className="border-b border-gray-800 px-8 py-6">
-        <h1 className="text-2xl font-bold text-amber-400 font-mono">
+      <header className="border-b border-gray-200 px-8 py-6">
+        <h1 className="text-xl font-light text-black tracking-tight">
           GTD Story Master
         </h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <p className="text-gray-400 text-sm mt-1 font-light">
           Turn your todo list into an epic adventure
         </p>
       </header>
 
       {/* Config banner */}
       {configApplied && (profileFromConfig || worldFromConfig) && (
-        <div className="px-8 py-2 bg-amber-500/5 border-b border-amber-500/20 flex items-center gap-2 text-sm text-amber-400/80">
-          <span>Loaded from adventurer.config.json:</span>
+        <div className="px-8 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-2 text-sm text-gray-500">
+          <span>Loaded from config:</span>
           {profileFromConfig && (
-            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-xs">
+            <span className="px-2 py-0.5 bg-gray-100 text-xs">
               Profile
             </span>
           )}
           {worldFromConfig && (
-            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-xs">
+            <span className="px-2 py-0.5 bg-gray-100 text-xs">
               World
             </span>
           )}
-          <span className="text-gray-500 text-xs ml-2">
-            (you can still edit these in their steps)
+          <span className="text-gray-400 text-xs ml-2">
+            (you can still edit these)
           </span>
         </div>
       )}
 
       {/* Stepper */}
-      <div className="px-8 py-4 border-b border-gray-800">
+      <div className="px-8 py-4 border-b border-gray-200">
         <div className="flex items-center gap-2 max-w-2xl">
           {steps.map((s, i) => (
             <div key={s.id} className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentStep(i)}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors",
+                  "flex items-center gap-2 px-3 py-1.5 text-sm transition-colors rounded-none",
                   i === step
-                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                    ? "text-black border-b border-black"
                     : isStepDone(i)
-                      ? "text-green-400 border border-green-500/20"
-                      : "text-gray-500 border border-gray-800",
+                      ? "text-gray-400"
+                      : "text-gray-300",
                 )}
               >
                 <span className="font-mono text-xs">
@@ -146,7 +146,7 @@ function SetupWizard() {
                 {s.label}
               </button>
               {i < steps.length - 1 && (
-                <span className="text-gray-700">&mdash;</span>
+                <span className="text-gray-300">&mdash;</span>
               )}
             </div>
           ))}
@@ -159,11 +159,11 @@ function SetupWizard() {
       </main>
 
       {/* Navigation */}
-      <footer className="border-t border-gray-800 px-8 py-4 flex justify-between items-center">
+      <footer className="border-t border-gray-200 px-8 py-4 flex justify-between items-center">
         <button
           onClick={handleBack}
           disabled={step === 0}
-          className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-2 text-sm text-gray-400 hover:text-black disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           &larr; Back
         </button>
@@ -173,7 +173,7 @@ function SetupWizard() {
             <button
               onClick={handleNext}
               disabled={!canProceed()}
-              className="px-6 py-2 bg-amber-600 text-gray-950 font-medium rounded hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
+              className="px-6 py-2 bg-black text-white font-light rounded-none hover:bg-gray-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
             >
               Next &rarr;
             </button>
@@ -181,7 +181,7 @@ function SetupWizard() {
             <button
               onClick={handleBeginAdventure}
               disabled={!isSetupComplete()}
-              className="px-6 py-2 bg-amber-600 text-gray-950 font-bold rounded hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors glow-amber"
+              className="px-6 py-2 bg-black text-white font-light rounded-none hover:bg-gray-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
             >
               Begin Your Adventure
             </button>

@@ -121,7 +121,7 @@ export function PreparationScreen() {
           storyWorld,
         }),
       });
-      
+
       const plotData: PlotStructure = await plotRes.json();
 
       setPlotStructure({
@@ -143,7 +143,7 @@ export function PreparationScreen() {
         level: 1,
         xp: 0,
       });*/
-      
+
       // Character stays null; narrator falls back to profile.name
 
       // Build minimal plot from tasks (no generate-plot API) so adventure page,
@@ -185,15 +185,15 @@ export function PreparationScreen() {
   }, [runPreparation]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 p-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white p-8">
       <div className="max-w-lg w-full text-center space-y-8">
         {stage === "error" ? (
           <>
-            <div className="text-red-400 text-lg font-medium">
-              The ritual was interrupted...
+            <div className="text-black text-lg font-light">
+              Something went wrong.
             </div>
-            <p className="text-gray-400 text-sm">{error}</p>
-            <p className="text-gray-500 text-xs">
+            <p className="text-gray-400 text-sm font-light">{error}</p>
+            <p className="text-gray-400 text-xs">
               Make sure you have configured your AI provider API key in the .env
               file.
             </p>
@@ -203,7 +203,7 @@ export function PreparationScreen() {
                 setError(null);
                 runPreparation();
               }}
-              className="px-6 py-2 bg-amber-600 text-gray-950 font-medium rounded hover:bg-amber-500 transition-colors"
+              className="px-6 py-2 bg-black text-white font-light rounded-none hover:bg-gray-800 transition-colors text-sm tracking-wide"
             >
               Try Again
             </button>
@@ -211,13 +211,13 @@ export function PreparationScreen() {
         ) : (
           <>
             <div className="relative">
-              <div className="w-16 h-16 mx-auto border-2 border-amber-500/30 rounded-full animate-spin border-t-amber-500" />
+              <div className="w-12 h-12 mx-auto border border-gray-300 rounded-full animate-spin border-t-black" />
             </div>
             <div className="space-y-2">
-              <p className="text-amber-400 text-lg font-medium animate-pulse">
+              <p className="text-black text-base font-light animate-pulse">
                 {loadingMessages[messageIndex]}
               </p>
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-400 text-sm font-light">
                 {stage === "optimizing"
                   ? "Optimizing your task order for peak productivity..."
                   : "Generating your unique adventure plot..."}
@@ -225,19 +225,19 @@ export function PreparationScreen() {
             </div>
             <div className="flex justify-center gap-3">
               <div
-                className={`w-3 h-3 rounded-full transition-colors ${
+                className={`w-2 h-2 rounded-full transition-colors ${
                   stage === "optimizing"
-                    ? "bg-amber-500 animate-pulse"
-                    : "bg-green-500"
+                    ? "bg-black animate-pulse"
+                    : "bg-gray-400"
                 }`}
               />
               <div
-                className={`w-3 h-3 rounded-full transition-colors ${
+                className={`w-2 h-2 rounded-full transition-colors ${
                   stage === "plotting"
-                    ? "bg-amber-500 animate-pulse"
+                    ? "bg-black animate-pulse"
                     : stage === "ready"
-                      ? "bg-green-500"
-                      : "bg-gray-700"
+                      ? "bg-gray-400"
+                      : "bg-gray-200"
                 }`}
               />
             </div>

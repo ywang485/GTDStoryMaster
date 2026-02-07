@@ -401,24 +401,24 @@ function AdventureGame() {
 
   if (phase === "completed") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 p-8">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white p-8">
         <div className="max-w-lg text-center space-y-6">
-          <h1 className="text-3xl font-bold text-amber-400">
-            Quest Complete!
+          <h1 className="text-2xl font-light text-black tracking-tight">
+            Complete.
           </h1>
-          <p className="text-gray-300 leading-relaxed">
+          <p className="text-gray-600 leading-relaxed font-light">
             You have completed all your tasks and reached the end of today&apos;s
             adventure. The Story Master bows with respect.
           </p>
-          <div className="text-gray-400 text-sm">
-            {completedTaskIds.length} tasks completed across {turnCount} turns
+          <div className="text-gray-400 text-sm font-mono">
+            {completedTaskIds.length} tasks / {turnCount} turns
           </div>
           <button
             onClick={() => {
               useGameStore.getState().resetGame();
               router.push("/");
             }}
-            className="px-6 py-3 bg-amber-600 text-gray-950 font-bold rounded hover:bg-amber-500 transition-colors"
+            className="px-6 py-3 bg-black text-white font-light rounded-none hover:bg-gray-800 transition-colors text-sm tracking-wide"
           >
             Begin a New Adventure
           </button>
@@ -428,7 +428,7 @@ function AdventureGame() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950">
+    <div className="h-screen flex flex-col bg-white">
       {/* Scene Header */}
       <SceneHeader
         scene={currentScene}
