@@ -278,19 +278,19 @@ export const stardewValleyWorld: StoryWorldDefinition = {
       assets: {
         stateAssets: {
           stage0: [
-            { id: "seeds", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 0, tileSize: 16, tilesPerRow: 16 },
+            { id: "seeds", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 0, tileSize: 16, tilesPerRow: 16, scale: 4.0 },
           ],
           stage1: [
-            { id: "sprout", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 1, tileSize: 16, tilesPerRow: 16 },
+            { id: "sprout", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 1, tileSize: 16, tilesPerRow: 16, scale: 4.0 },
           ],
           stage2: [
-            { id: "growing", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 2, tileSize: 16, tilesPerRow: 16 },
+            { id: "growing", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 2, tileSize: 16, tilesPerRow: 16, scale: 4.0 },
           ],
           stage3: [
-            { id: "maturing", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 3, tileSize: 16, tilesPerRow: 16 },
+            { id: "maturing", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 3, tileSize: 16, tilesPerRow: 16, scale: 4.0 },
           ],
           stage4: [
-            { id: "mature", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 4, tileSize: 16, tilesPerRow: 16 },
+            { id: "mature", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 4, tileSize: 16, tilesPerRow: 16, scale: 4.0 },
           ],
         },
         actionAssets: {
