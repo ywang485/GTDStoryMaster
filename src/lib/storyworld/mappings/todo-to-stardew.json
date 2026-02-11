@@ -134,71 +134,21 @@
           "parameters": {
             "objectId": "{task.id}",
             "typeId": "crop"
-          },
-          "render_instructions": [
-            {
-              "type": "play_animation",
-              "assetId": "plant-seed"
-            },
-            {
-              "type": "play_sound",
-              "assetId": "dig-soil"
-            },
-            {
-              "type": "show_particle",
-              "assetId": "dirt-spray"
-            }
-          ]
+          }
         },
         {
           "todo_action": "start_task",
           "storyworld_action": "water",
           "parameters": {
             "objectId": "{task.id}"
-          },
-          "render_instructions": [
-            {
-              "type": "play_animation",
-              "assetId": "watering-can"
-            },
-            {
-              "type": "play_sound",
-              "assetId": "water-splash"
-            },
-            {
-              "type": "show_particle",
-              "assetId": "water-droplets"
-            }
-          ]
+          }
         },
         {
           "todo_action": "complete_task",
           "storyworld_action": "harvest",
           "parameters": {
             "objectId": "{task.id}"
-          },
-          "render_instructions": [
-            {
-              "type": "play_animation",
-              "assetId": "harvest-crop"
-            },
-            {
-              "type": "play_sound",
-              "assetId": "harvest-chime"
-            },
-            {
-              "type": "show_particle",
-              "assetId": "sparkles"
-            },
-            {
-              "type": "display_text",
-              "text": "Task completed! 🌾",
-              "style": {
-                "animation": "typewriter",
-                "speed": 40
-              }
-            }
-          ]
+          }
         }
       ]
     },
@@ -223,36 +173,5 @@
         }
       ]
     }
-  },
-
-  "visualization": {
-    "layout": {
-      "type": "grid",
-      "columns": 6,
-      "spacing": 120,
-      "start_x": 100,
-      "start_y": 350
-    },
-    "animations": {
-      "task_created": {
-        "duration": 800,
-        "effect": "bounce"
-      },
-      "task_started": {
-        "duration": 1000,
-        "effect": "grow"
-      },
-      "task_completed": {
-        "duration": 1500,
-        "effect": "celebrate"
-      }
-    }
-  },
-
-  "sync_strategy": {
-    "mode": "bidirectional",
-    "description": "Changes in todos update storyworld, and storyworld actions can update todos",
-    "conflict_resolution": "todo_takes_precedence",
-    "sync_interval_ms": 100
   }
 }
