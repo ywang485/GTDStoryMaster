@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useGameStore } from "@/stores/use-game-store";
 import { useSetupStore } from "@/stores/use-setup-store";
 import { useUIStore } from "@/stores/use-ui-store";
+import { useToolStore } from "@/stores/use-tool-store";
 import { HydrationGate } from "@/components/providers/hydration-gate";
 import { NarrativeViewport } from "@/components/game/narrative-viewport";
 import { QuestSidebar } from "@/components/game/quest-sidebar";
@@ -80,10 +81,13 @@ function AdventureGame() {
     incrementTurn,
     setEnvironment,
     setPhase,
+    getTasks,
+    useToolSystem,
   } = useGameStore();
 
   const { profile, storyWorld } = useSetupStore();
   const { isStreaming, setIsStreaming, sidebarOpen } = useUIStore();
+  const { getPublicStates: getToolPublicStates } = useToolStore();
   const [streamingText, setStreamingText] = useState("");
   const [exampleResponses, setExampleResponses] = useState<string[]>([]);
   const hasInitialized = useRef(false);
@@ -138,13 +142,22 @@ function AdventureGame() {
       const env = getCurrentEnvironment(environment.mood, environment.weather);
       setEnvironment(env);
 
+      // Get current tasks (from tool if enabled, otherwise from game store)
+      const currentTasks = useToolSystem ? getTasks() : tasks;
+
+      // Get tool states if tool system is enabled
+      const toolStates = useToolSystem
+        ? { todoList: getToolPublicStates() }
+        : undefined;
+
       const turnContext = buildTurnContext({
         turnNumber: turnCount + 1,
         currentScene,
-        tasks,
+        tasks: currentTasks,
         narrativeLog,
         playerInput,
         environment: env,
+        toolStates,
       });
 
       try {

@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSetupStore } from "@/stores/use-setup-store";
 import { useGameStore } from "@/stores/use-game-store";
+import { useToolStore } from "@/stores/use-tool-store";
+import { migrateTasksToTodoList } from "@/lib/tools";
 import type { OptimizedTask } from "@/types/task";
 import type { PlotStructure } from "@/types/story";
 
@@ -50,7 +52,10 @@ export function PreparationScreen() {
     setPlotStructure,
     setCharacter,
     setTasks,
+    enableToolSystem,
+    syncTasksFromTool,
   } = useGameStore();
+  const { initializeTodoList } = useToolStore();
 
   const [stage, setStage] = useState<
     "optimizing" | "plotting" | "ready" | "error"
@@ -158,6 +163,30 @@ export function PreparationScreen() {
       }));
       setTasks(gameTasks);
 
+      // Initialize TodoList tool with tasks
+      try {
+        const migratedTasks = migrateTasksToTodoList(gameTasks);
+        await initializeTodoList(migratedTasks);
+
+        // Set first task to in_progress (equivalent to active)
+        if (gameTasks.length > 0) {
+          const toolStore = useToolStore.getState();
+          await toolStore.updateTaskStatus(gameTasks[0].id, "in_progress");
+        }
+
+        // Enable tool system in game store
+        enableToolSystem();
+
+        // Sync tasks from tool to game store
+        syncTasksFromTool();
+
+        console.log("✅ TodoList tool initialized successfully");
+      } catch (err) {
+        console.error("⚠️ Failed to initialize TodoList tool:", err);
+        console.log("Falling back to legacy task management");
+        // Tool initialization failed, continue with legacy system
+      }
+
       setPhase("playing");
       setStage("ready");
 
@@ -178,6 +207,9 @@ export function PreparationScreen() {
     setTasks,
     setPhase,
     router,
+    initializeTodoList,
+    enableToolSystem,
+    syncTasksFromTool,
   ]);
 
   useEffect(() => {
