@@ -89,6 +89,7 @@ export default function StoryWorldDemoPage() {
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
               <StoryWorldRenderer
                 executor={executor}
+                world={stardewValleyWorld}
                 width={800}
                 height={600}
                 onRenderComplete={(instruction) => {

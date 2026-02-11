@@ -11,7 +11,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type {
   RenderInstruction,
   StoryWorldState,
-  StoryWorldExecutor
+  StoryWorldExecutor,
+  StoryWorldDefinition,
 } from "@/types/storyworld-definition";
 import { SoundEngine } from "./sound-engine";
 import { ParticleSystem } from "./particle-system";
@@ -19,6 +20,7 @@ import { SpriteRenderer } from "./sprite-renderer";
 
 interface StoryWorldRendererProps {
   executor: StoryWorldExecutor;
+  world: StoryWorldDefinition;
   width?: number;
   height?: number;
   onRenderComplete?: (instruction: RenderInstruction) => void;
@@ -27,6 +29,7 @@ interface StoryWorldRendererProps {
 
 export function StoryWorldRenderer({
   executor,
+  world,
   width = 800,
   height = 600,
   onRenderComplete,
@@ -44,6 +47,7 @@ export function StoryWorldRenderer({
   const [, setForceUpdate] = useState(0);
   const processedRenders = useRef<Set<string>>(new Set());
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
+  const spriteImages = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Initialize systems
   useEffect(() => {
@@ -61,6 +65,26 @@ export function StoryWorldRenderer({
       console.error('Failed to load background image');
     };
 
+    // Load sprite images from storyworld definition
+    world.objectTypes.forEach((objectType) => {
+      if (objectType.assets?.stateAssets) {
+        Object.entries(objectType.assets.stateAssets).forEach(([stateName, assets]) => {
+          assets.forEach((asset: any) => {
+            if (asset.type === "sprite" && asset.url) {
+              const img = new Image();
+              img.src = asset.url;
+              img.onload = () => {
+                spriteImages.current.set(asset.id, img);
+              };
+              img.onerror = () => {
+                console.error(`Failed to load sprite: ${asset.id} from ${asset.url}`);
+              };
+            }
+          });
+        });
+      }
+    });
+
     // Start main render loop
     const renderLoop = () => {
       renderScene();
@@ -73,7 +97,34 @@ export function StoryWorldRenderer({
       particleSystemRef.current?.cleanup();
       spriteRendererRef.current?.cleanup();
     };
-  }, []);
+  }, [world]);
+
+  // Get the sprite ID for an object based on its current state
+  const getSpriteForObject = useCallback((obj: any): string | null => {
+    const objectType = world.objectTypes.find((ot) => ot.id === obj.typeId);
+    if (!objectType?.assets?.stateAssets) return null;
+
+    // Determine which state key to use based on object properties
+    let stateKey: string | null = null;
+
+    if (obj.typeId === "crop") {
+      stateKey = `stage${obj.state.growthStage || 0}`;
+    } else if (obj.typeId === "facility") {
+      stateKey = obj.state.isOpen ? "open" : "closed";
+    } else if (obj.typeId === "villager") {
+      stateKey = obj.state.mood || "neutral";
+    } else if (obj.typeId === "livestock") {
+      const happiness = obj.state.happiness || 50;
+      if (happiness > 70) stateKey = "happy";
+      else if (happiness < 30) stateKey = "sick";
+      else stateKey = "neutral";
+    }
+
+    if (!stateKey || !objectType.assets.stateAssets[stateKey]) return null;
+
+    const assets = objectType.assets.stateAssets[stateKey];
+    return assets[0]?.id || null;
+  }, [world]);
 
   // Render the scene
   const renderScene = useCallback(() => {
@@ -109,15 +160,32 @@ export function StoryWorldRenderer({
       const x = 100 + (index % 6) * 120;
       const y = canvas.height / 2 + 50 + Math.floor(index / 6) * 100;
 
-      // Render based on object type
-      if (obj.typeId === "crop") {
-        renderCrop(ctx, x, y, obj);
-      } else if (obj.typeId === "livestock") {
-        renderLivestock(ctx, x, y, obj);
-      } else if (obj.typeId === "villager") {
-        renderVillager(ctx, x, y, obj);
-      } else if (obj.typeId === "facility") {
-        renderFacility(ctx, x, y, obj);
+      // Get sprite for this object's current state
+      const spriteId = getSpriteForObject(obj);
+      const spriteImage = spriteId ? spriteImages.current.get(spriteId) : null;
+
+      if (spriteImage) {
+        // Draw the sprite image
+        const spriteWidth = 64;
+        const spriteHeight = 64;
+        ctx.drawImage(
+          spriteImage,
+          x - spriteWidth / 2,
+          y - spriteHeight / 2,
+          spriteWidth,
+          spriteHeight
+        );
+      } else {
+        // Fallback to procedural rendering if sprite not loaded
+        if (obj.typeId === "crop") {
+          renderCrop(ctx, x, y, obj);
+        } else if (obj.typeId === "livestock") {
+          renderLivestock(ctx, x, y, obj);
+        } else if (obj.typeId === "villager") {
+          renderVillager(ctx, x, y, obj);
+        } else if (obj.typeId === "facility") {
+          renderFacility(ctx, x, y, obj);
+        }
       }
 
       // Draw label
@@ -126,7 +194,7 @@ export function StoryWorldRenderer({
       ctx.textAlign = "center";
       ctx.fillText(obj.id, x, y + 40);
     });
-  }, [executor]);
+  }, [executor, getSpriteForObject]);
 
   const renderCrop = (ctx: CanvasRenderingContext2D, x: number, y: number, obj: any) => {
     const stage = obj.state.growthStage || 0;
