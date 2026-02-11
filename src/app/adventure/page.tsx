@@ -75,13 +75,12 @@ function AdventureGame() {
     addNarrativeEntry,
     completeTask,
     skipTask,
-    updateTaskStatus,
-    reorderTasks,
     setCurrentScene,
     incrementTurn,
     setEnvironment,
     setPhase,
     getTasks,
+    syncTasksFromTool,
   } = useGameStore();
 
   const { profile, storyWorld } = useSetupStore();
@@ -247,17 +246,47 @@ function AdventureGame() {
           addNarrativeEntry(narratorEntry);
           console.log("Added narrative entry:", narratorEntry);
 
-          // Apply task status updates from the AI response
-          if (finalResponse.updatedTaskCompletionState) {
-            for (const taskUpdate of finalResponse.updatedTaskCompletionState) {
-              updateTaskStatus(taskUpdate.taskId, taskUpdate.status);
-            }
-          }
+          // Execute tool calls from the AI response
+          if (finalResponse.toolCalls && finalResponse.toolCalls.length > 0) {
+            console.log("Executing tool calls from AI:", finalResponse.toolCalls);
+            const toolStore = useToolStore.getState();
 
-          // Apply task reordering if provided
-          if (finalResponse.adjustedTaskOrder && finalResponse.adjustedTaskOrder.length > 0) {
-            console.log("Reordering tasks based on AI suggestion:", finalResponse.adjustedTaskOrder);
-            reorderTasks(finalResponse.adjustedTaskOrder);
+            for (const toolCall of finalResponse.toolCalls) {
+              try {
+                switch (toolCall.operation) {
+                  case "updateTaskStatus":
+                    await toolStore.updateTaskStatus(
+                      toolCall.params.taskId,
+                      toolCall.params.status
+                    );
+                    break;
+
+                  case "reorderTasks":
+                    await toolStore.reorderTasks(toolCall.params.taskIds);
+                    break;
+
+                  case "addTask":
+                    // Use createTask from tool store
+                    await toolStore.createTask({
+                      title: toolCall.params.title,
+                      description: toolCall.params.description,
+                    });
+                    break;
+
+                  case "deleteTask":
+                    await toolStore.deleteTask(toolCall.params.taskId);
+                    break;
+
+                  default:
+                    console.warn("Unknown tool operation:", toolCall);
+                }
+              } catch (error) {
+                console.error("Failed to execute tool call:", toolCall, error);
+              }
+            }
+
+            // Sync tasks from tool to game store after all operations
+            syncTasksFromTool();
           }
 
           // Store example responses for the action bar
@@ -301,6 +330,9 @@ function AdventureGame() {
       setEnvironment,
       addNarrativeEntry,
       incrementTurn,
+      syncTasksFromTool,
+      getTasks,
+      getToolPublicStates,
     ],
   );
 

@@ -51,26 +51,44 @@ STORY: [your narrative story text here]
 
 Then, output the structured data as JSON prefixed with "DATA:" on its own line:
 DATA: {
-	"updatedTaskCompletionState": [{"taskId": "task-id", "status": "pending"|"active"|"completed"|"skipped"}, "metaphor": "metaphoric activity set in the storyworld", ...],
-	"adjustedTaskOrder": ["task-id-1", "task-id-2", "task-id-3"] (OPTIONAL: array of task IDs in new optimal order. Only include if task reordering would improve productivity. Use the exact task IDs from the task list.),
+	"toolCalls": [OPTIONAL: array of TodoList tool calls to update task state. Only include if tasks need to be updated, reordered, added, or deleted],
 	"productivityObservation": (observation on the user's behavior that could be useful for future conversations),
   "exampleResponses": [(several example responses the user could give based on the current story and task progress)],
-  "apiCalls": [(a sequence of API calls together with fully specified input parameters. Each API call should be in supplied list of system capabilities and matches the specfication of input parameters.)],
 	"explanation": (concise explanation of the current story in 1-2 sentences)
 }
 
 Example:
 STORY: 正午的阳光透过你公寓的落地窗洒进来,...
-DATA: {"updatedTaskCompletionState": [{"taskId": "task-1", "status": "completed", "metaphor": "defeat boss", ...}], "productivityObservation": "用户完成了第一个任务", "explanation": "故事开始，主角接受了第一个任务"}...]
+DATA: {
+  "toolCalls": [
+    {"operation": "updateTaskStatus", "params": {"taskId": "task-1", "status": "completed"}},
+    {"operation": "updateTaskStatus", "params": {"taskId": "task-2", "status": "in_progress"}}
+  ],
+  "productivityObservation": "用户完成了第一个任务",
+  "explanation": "故事开始，主角接受了第一个任务"
+}
 
-Important notes about adjustedTaskOrder:
-- Use the exact task IDs from the provided task list
-- List ALL task IDs in the desired order, or omit this field entirely
-- Consider factors: task dependencies, time of day, user energy levels, context switching costs, and productivity principles
-- Only reorder when there's a clear productivity benefit
+Important notes about toolCalls (TodoList operations):
+You can use the following operations to manage tasks:
+
+1. updateTaskStatus - Change a task's status:
+   {"operation": "updateTaskStatus", "params": {"taskId": "task-id", "status": "pending"|"in_progress"|"completed"|"cancelled"}}
+
+2. reorderTasks - Reorder all tasks for productivity optimization:
+   {"operation": "reorderTasks", "params": {"taskIds": ["task-1", "task-2", "task-3"]}}
+   - Use exact task IDs from the provided task list
+   - List ALL task IDs in the desired order
+   - Consider: dependencies, time of day, energy levels, context switching costs
+   - Only reorder when there's a clear productivity benefit
+
+3. addTask - Create a new task discovered during the story:
+   {"operation": "addTask", "params": {"title": "Task title", "description": "Optional description"}}
+
+4. deleteTask - Remove a task that's no longer relevant:
+   {"operation": "deleteTask", "params": {"taskId": "task-id"}}
 
 Notes about exampleResponses:
-Contextualize the following general cartegories with concrete actions related to current REAL-WORLD task execution state:
+Contextualize the following general categories with concrete actions related to current REAL-WORLD task execution state:
 - task progress report
 - productivity report
 - mood report

@@ -1,24 +1,51 @@
 import { z } from "zod";
 
-const taskCompletionStateSchema = z.object({
-  taskId: z.string().describe("ID of the task"),
-  status: z
-    .enum(["pending", "active", "completed", "skipped"])
-    .describe("Updated status for this task"),
-});
+// Tool call schema for TodoList operations
+const todoListToolCallSchema = z.discriminatedUnion("operation", [
+  z.object({
+    operation: z.literal("updateTaskStatus"),
+    params: z.object({
+      taskId: z.string().describe("ID of the task to update"),
+      status: z
+        .enum(["pending", "in_progress", "completed", "cancelled"])
+        .describe("New status for the task"),
+    }),
+  }),
+  z.object({
+    operation: z.literal("reorderTasks"),
+    params: z.object({
+      taskIds: z
+        .array(z.string())
+        .describe(
+          "Complete ordered list of all task IDs in the desired order",
+        ),
+    }),
+  }),
+  z.object({
+    operation: z.literal("addTask"),
+    params: z.object({
+      title: z.string().describe("Title of the new task"),
+      description: z
+        .string()
+        .optional()
+        .describe("Optional description of the task"),
+    }),
+  }),
+  z.object({
+    operation: z.literal("deleteTask"),
+    params: z.object({
+      taskId: z.string().describe("ID of the task to delete"),
+    }),
+  }),
+]);
 
 export const narrateResponseSchema = z.object({
   storyText: z.string().describe("The story text to display to the player"),
-  updatedTaskCompletionState: z
-    .array(taskCompletionStateSchema)
-    .describe(
-      "Task completion state after this turn; only include tasks whose status changed or are relevant",
-    ),
-  adjustedTaskOrder: z
-    .array(z.string())
+  toolCalls: z
+    .array(todoListToolCallSchema)
     .optional()
     .describe(
-      "Optional reordered list of task IDs based on updated context, priorities, or productivity optimization. Only include if task order should be changed.",
+      "Optional tool calls to update task state. Use TodoList operations to mark tasks completed, reorder tasks, add new tasks, or delete tasks based on the player's actions and story progression.",
     ),
   productivityObservation: z
     .string()
@@ -37,4 +64,4 @@ export const narrateResponseSchema = z.object({
 });
 
 export type NarrateResponse = z.infer<typeof narrateResponseSchema>;
-export type TaskCompletionState = z.infer<typeof taskCompletionStateSchema>;
+export type TodoListToolCall = z.infer<typeof todoListToolCallSchema>;
