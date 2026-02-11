@@ -1,0 +1,258 @@
+{
+  "mapping_name": "TodoList to Stardew Valley",
+  "description": "Maps todo list items to crops in Stardew Valley storyworld. Tasks are visualized as crops that grow as you make progress.",
+  "version": "1.0.0",
+
+  "tool": {
+    "name": "TodoWrite",
+    "entity": "tasks",
+    "states": ["pending", "in_progress", "completed"]
+  },
+
+  "storyworld": {
+    "name": "Stardew Valley",
+    "object_type": "crop",
+    "states": ["stage0", "stage1", "stage2", "stage3", "stage4"]
+  },
+
+  "mappings": {
+    "entity_mapping": {
+      "description": "Maps todo tasks to crop objects",
+      "source": "tasks",
+      "target": "crops",
+      "rules": [
+        {
+          "trigger": "task_created",
+          "action": "create_crop",
+          "parameters": {
+            "typeId": "crop",
+            "state": {
+              "growthStage": 0,
+              "watered": false
+            }
+          }
+        },
+        {
+          "trigger": "task_deleted",
+          "action": "remove_crop"
+        }
+      ]
+    },
+
+    "state_mapping": {
+      "description": "Maps task states to crop growth stages",
+      "rules": [
+        {
+          "task_state": "pending",
+          "crop_state": {
+            "growthStage": 0,
+            "watered": false
+          },
+          "visual": "seeds",
+          "description": "Task not started - seeds planted"
+        },
+        {
+          "task_state": "in_progress",
+          "crop_state": {
+            "growthStage": 2,
+            "watered": true
+          },
+          "visual": "growing",
+          "description": "Task in progress - crop growing",
+          "transitions": {
+            "auto_advance": false,
+            "animation": "water"
+          }
+        },
+        {
+          "task_state": "completed",
+          "crop_state": {
+            "growthStage": 4,
+            "watered": true
+          },
+          "visual": "mature",
+          "description": "Task completed - crop fully grown",
+          "transitions": {
+            "animation": "harvest",
+            "celebration": true
+          }
+        }
+      ]
+    },
+
+    "progression_mapping": {
+      "description": "Maps task progression to crop growth stages",
+      "stages": [
+        {
+          "stage": 0,
+          "task_state": "pending",
+          "crop_growth_stage": 0,
+          "sprite_tile_index": 0,
+          "label": "Seeds"
+        },
+        {
+          "stage": 1,
+          "task_state": "in_progress",
+          "crop_growth_stage": 1,
+          "sprite_tile_index": 1,
+          "label": "Sprout",
+          "auto_advance_to": 2,
+          "auto_advance_delay_ms": 1000
+        },
+        {
+          "stage": 2,
+          "task_state": "in_progress",
+          "crop_growth_stage": 2,
+          "sprite_tile_index": 2,
+          "label": "Growing"
+        },
+        {
+          "stage": 3,
+          "task_state": "completed",
+          "crop_growth_stage": 3,
+          "sprite_tile_index": 3,
+          "label": "Maturing",
+          "auto_advance_to": 4,
+          "auto_advance_delay_ms": 1000
+        },
+        {
+          "stage": 4,
+          "task_state": "completed",
+          "crop_growth_stage": 4,
+          "sprite_tile_index": 4,
+          "label": "Mature"
+        }
+      ]
+    },
+
+    "action_mapping": {
+      "description": "Maps todo actions to storyworld actions",
+      "rules": [
+        {
+          "todo_action": "create_task",
+          "storyworld_action": "plant",
+          "parameters": {
+            "objectId": "{task.id}",
+            "typeId": "crop"
+          },
+          "render_instructions": [
+            {
+              "type": "play_animation",
+              "assetId": "plant-seed"
+            },
+            {
+              "type": "play_sound",
+              "assetId": "dig-soil"
+            },
+            {
+              "type": "show_particle",
+              "assetId": "dirt-spray"
+            }
+          ]
+        },
+        {
+          "todo_action": "start_task",
+          "storyworld_action": "water",
+          "parameters": {
+            "objectId": "{task.id}"
+          },
+          "render_instructions": [
+            {
+              "type": "play_animation",
+              "assetId": "watering-can"
+            },
+            {
+              "type": "play_sound",
+              "assetId": "water-splash"
+            },
+            {
+              "type": "show_particle",
+              "assetId": "water-droplets"
+            }
+          ]
+        },
+        {
+          "todo_action": "complete_task",
+          "storyworld_action": "harvest",
+          "parameters": {
+            "objectId": "{task.id}"
+          },
+          "render_instructions": [
+            {
+              "type": "play_animation",
+              "assetId": "harvest-crop"
+            },
+            {
+              "type": "play_sound",
+              "assetId": "harvest-chime"
+            },
+            {
+              "type": "show_particle",
+              "assetId": "sparkles"
+            },
+            {
+              "type": "display_text",
+              "text": "Task completed! 🌾",
+              "style": {
+                "animation": "typewriter",
+                "speed": 40
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    "metadata_mapping": {
+      "description": "Maps task metadata to crop properties",
+      "rules": [
+        {
+          "task_field": "content",
+          "crop_field": "id",
+          "transform": "slugify"
+        },
+        {
+          "task_field": "content",
+          "crop_field": "label",
+          "transform": "truncate",
+          "max_length": 30
+        },
+        {
+          "task_field": "activeForm",
+          "crop_field": "description"
+        }
+      ]
+    }
+  },
+
+  "visualization": {
+    "layout": {
+      "type": "grid",
+      "columns": 6,
+      "spacing": 120,
+      "start_x": 100,
+      "start_y": 350
+    },
+    "animations": {
+      "task_created": {
+        "duration": 800,
+        "effect": "bounce"
+      },
+      "task_started": {
+        "duration": 1000,
+        "effect": "grow"
+      },
+      "task_completed": {
+        "duration": 1500,
+        "effect": "celebrate"
+      }
+    }
+  },
+
+  "sync_strategy": {
+    "mode": "bidirectional",
+    "description": "Changes in todos update storyworld, and storyworld actions can update todos",
+    "conflict_resolution": "todo_takes_precedence",
+    "sync_interval_ms": 100
+  }
+}
