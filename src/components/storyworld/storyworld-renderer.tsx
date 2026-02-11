@@ -43,12 +43,23 @@ export function StoryWorldRenderer({
   const [activeAnimations, setActiveAnimations] = useState<Set<string>>(new Set());
   const [, setForceUpdate] = useState(0);
   const processedRenders = useRef<Set<string>>(new Set());
+  const backgroundImageRef = useRef<HTMLImageElement | null>(null);
 
   // Initialize systems
   useEffect(() => {
     soundEngineRef.current = new SoundEngine();
     particleSystemRef.current = new ParticleSystem(canvasRef.current!);
     spriteRendererRef.current = new SpriteRenderer(canvasRef.current!);
+
+    // Load background image
+    const bgImage = new Image();
+    bgImage.src = '/assets/stardew_valley_bg.png';
+    bgImage.onload = () => {
+      backgroundImageRef.current = bgImage;
+    };
+    bgImage.onerror = () => {
+      console.error('Failed to load background image');
+    };
 
     // Start main render loop
     const renderLoop = () => {
@@ -82,22 +93,13 @@ export function StoryWorldRenderer({
     // Clean up expired renders
     executor.cleanupExpiredRenders();
 
-    // Clear canvas
-    ctx.fillStyle = "#87CEEB";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw grass background
-    ctx.fillStyle = "#90EE90";
-    ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
-
-    // Draw ground pattern
-    ctx.strokeStyle = "#7CCD7C";
-    ctx.lineWidth = 1;
-    for (let y = canvas.height / 2; y < canvas.height; y += 20) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
+    // Draw background image
+    if (backgroundImageRef.current) {
+      ctx.drawImage(backgroundImageRef.current, 0, 0, canvas.width, canvas.height);
+    } else {
+      // Fallback to solid color while loading
+      ctx.fillStyle = "#87CEEB";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
     // Render objects from state
