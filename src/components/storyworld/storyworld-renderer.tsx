@@ -48,6 +48,11 @@ export function StoryWorldRenderer({
   const processedRenders = useRef<Set<string>>(new Set());
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const spriteImages = useRef<Map<string, HTMLImageElement>>(new Map());
+  const spriteMetadata = useRef<Map<string, {
+    tileIndex?: number;
+    tileSize?: number;
+    tilesPerRow?: number;
+  }>>(new Map());
 
   // Initialize systems
   useEffect(() => {
@@ -66,19 +71,45 @@ export function StoryWorldRenderer({
     };
 
     // Load sprite images from storyworld definition
+    const loadedTilesets = new Set<string>();
+
     world.objectTypes.forEach((objectType) => {
       if (objectType.assets?.stateAssets) {
         Object.entries(objectType.assets.stateAssets).forEach(([stateName, assets]) => {
           assets.forEach((asset: any) => {
             if (asset.type === "sprite" && asset.url) {
-              const img = new Image();
-              img.src = asset.url;
-              img.onload = () => {
-                spriteImages.current.set(asset.id, img);
-              };
-              img.onerror = () => {
-                console.error(`Failed to load sprite: ${asset.id} from ${asset.url}`);
-              };
+              // Store metadata for this sprite
+              spriteMetadata.current.set(asset.id, {
+                tileIndex: asset.tileIndex,
+                tileSize: asset.tileSize || 16,
+                tilesPerRow: asset.tilesPerRow || 16,
+              });
+
+              // Load the tileset image if not already loaded
+              const tilesetKey = asset.url;
+              if (!loadedTilesets.has(tilesetKey)) {
+                loadedTilesets.add(tilesetKey);
+                const img = new Image();
+                img.src = asset.url;
+                img.onload = () => {
+                  spriteImages.current.set(tilesetKey, img);
+                };
+                img.onerror = () => {
+                  console.error(`Failed to load tileset: ${asset.url}`);
+                };
+              }
+
+              // Also map the sprite ID to the tileset for easy lookup
+              if (!spriteImages.current.has(asset.id)) {
+                // Wait for tileset to load, then create reference
+                const checkTileset = setInterval(() => {
+                  const tileset = spriteImages.current.get(tilesetKey);
+                  if (tileset) {
+                    spriteImages.current.set(asset.id, tileset);
+                    clearInterval(checkTileset);
+                  }
+                }, 100);
+              }
             }
           });
         });
@@ -163,18 +194,41 @@ export function StoryWorldRenderer({
       // Get sprite for this object's current state
       const spriteId = getSpriteForObject(obj);
       const spriteImage = spriteId ? spriteImages.current.get(spriteId) : null;
+      const metadata = spriteId ? spriteMetadata.current.get(spriteId) : null;
 
       if (spriteImage) {
         // Draw the sprite image
         const spriteWidth = 64;
         const spriteHeight = 64;
-        ctx.drawImage(
-          spriteImage,
-          x - spriteWidth / 2,
-          y - spriteHeight / 2,
-          spriteWidth,
-          spriteHeight
-        );
+
+        if (metadata?.tileIndex !== undefined) {
+          // Draw from tileset using tile index
+          const tileSize = metadata.tileSize || 16;
+          const tilesPerRow = metadata.tilesPerRow || 16;
+          const tileIndex = metadata.tileIndex;
+
+          // Calculate source position in tileset
+          const tileCol = tileIndex % tilesPerRow;
+          const tileRow = Math.floor(tileIndex / tilesPerRow);
+          const sx = tileCol * tileSize;
+          const sy = tileRow * tileSize;
+
+          // Draw the tile
+          ctx.drawImage(
+            spriteImage,
+            sx, sy, tileSize, tileSize,  // source
+            x - spriteWidth / 2, y - spriteHeight / 2, spriteWidth, spriteHeight  // destination
+          );
+        } else {
+          // Draw full image (single sprite)
+          ctx.drawImage(
+            spriteImage,
+            x - spriteWidth / 2,
+            y - spriteHeight / 2,
+            spriteWidth,
+            spriteHeight
+          );
+        }
       } else {
         // Fallback to procedural rendering if sprite not loaded
         if (obj.typeId === "crop") {
