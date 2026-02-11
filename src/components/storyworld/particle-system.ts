@@ -106,9 +106,10 @@ export class ParticleSystem {
   }
 
   private render(): void {
-    // Don't clear canvas - sprites are rendered separately
-    // Just render particles over everything
+    // Particles are rendered by the main renderer now
+    // This method is kept for compatibility but doesn't clear canvas
 
+    this.ctx.save();
     this.particles.forEach((particle) => {
       this.ctx.save();
 
@@ -153,6 +154,7 @@ export class ParticleSystem {
 
       this.ctx.restore();
     });
+    this.ctx.restore();
   }
 
   private renderStar(x: number, y: number, size: number, color: string): void {

@@ -41,6 +41,7 @@ export function StoryWorldRenderer({
   const [currentNarrative, setCurrentNarrative] = useState<string>("");
   const [isTyping, setIsTyping] = useState(false);
   const [activeAnimations, setActiveAnimations] = useState<Set<string>>(new Set());
+  const [, setForceUpdate] = useState(0);
 
   // Initialize systems
   useEffect(() => {
@@ -48,11 +49,227 @@ export function StoryWorldRenderer({
     particleSystemRef.current = new ParticleSystem(canvasRef.current!);
     spriteRendererRef.current = new SpriteRenderer(canvasRef.current!);
 
+    // Start main render loop
+    const renderLoop = () => {
+      renderScene();
+      requestAnimationFrame(renderLoop);
+    };
+    renderLoop();
+
     return () => {
       soundEngineRef.current?.cleanup();
       particleSystemRef.current?.cleanup();
       spriteRendererRef.current?.cleanup();
     };
+  }, []);
+
+  // Render the scene
+  const renderScene = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    // Clear canvas
+    ctx.fillStyle = "#87CEEB";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw grass background
+    ctx.fillStyle = "#90EE90";
+    ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+
+    // Draw ground pattern
+    ctx.strokeStyle = "#7CCD7C";
+    ctx.lineWidth = 1;
+    for (let y = canvas.height / 2; y < canvas.height; y += 20) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+
+    // Get current state and render objects
+    const state = executor.getState();
+    const objects = Object.values(state.objects);
+
+    objects.forEach((obj, index) => {
+      const x = 100 + (index % 6) * 120;
+      const y = canvas.height / 2 + 50 + Math.floor(index / 6) * 100;
+
+      // Render based on object type
+      if (obj.typeId === "crop") {
+        renderCrop(ctx, x, y, obj);
+      } else if (obj.typeId === "livestock") {
+        renderLivestock(ctx, x, y, obj);
+      } else if (obj.typeId === "villager") {
+        renderVillager(ctx, x, y, obj);
+      } else if (obj.typeId === "facility") {
+        renderFacility(ctx, x, y, obj);
+      }
+
+      // Draw label
+      ctx.fillStyle = "#000000";
+      ctx.font = "10px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(obj.id, x, y + 40);
+    });
+  }, [executor]);
+
+  const renderCrop = (ctx: CanvasRenderingContext2D, x: number, y: number, obj: any) => {
+    const stage = obj.state.growthStage || 0;
+    const watered = obj.state.watered;
+
+    // Draw soil
+    ctx.fillStyle = watered ? "#654321" : "#8B4513";
+    ctx.fillRect(x - 15, y - 5, 30, 10);
+
+    // Draw crop based on growth stage
+    if (stage === 0) {
+      // Seeds
+      ctx.fillStyle = "#8B4513";
+      for (let i = 0; i < 3; i++) {
+        ctx.fillRect(x + (i - 1) * 4 - 2, y - 2, 4, 4);
+      }
+    } else if (stage === 1) {
+      // Sprout
+      ctx.fillStyle = "#90EE90";
+      ctx.fillRect(x - 3, y - 10, 6, 10);
+    } else if (stage === 2) {
+      // Growing
+      ctx.fillStyle = "#228B22";
+      ctx.fillRect(x - 2, y - 20, 4, 20);
+      ctx.fillStyle = "#90EE90";
+      ctx.fillRect(x - 6, y - 15, 4, 4);
+      ctx.fillRect(x + 2, y - 15, 4, 4);
+    } else if (stage === 3) {
+      // Maturing
+      ctx.fillStyle = "#228B22";
+      ctx.fillRect(x - 2, y - 25, 4, 25);
+      ctx.fillStyle = "#FFD700";
+      ctx.beginPath();
+      ctx.arc(x, y - 28, 4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (stage >= 4) {
+      // Mature
+      ctx.fillStyle = "#228B22";
+      ctx.fillRect(x - 2, y - 25, 4, 25);
+      ctx.fillStyle = "#FF6347";
+      ctx.beginPath();
+      ctx.arc(x, y - 28, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw watered indicator
+    if (watered) {
+      ctx.fillStyle = "rgba(100, 149, 237, 0.3)";
+      ctx.fillRect(x - 15, y - 5, 30, 10);
+    }
+  };
+
+  const renderLivestock = (ctx: CanvasRenderingContext2D, x: number, y: number, obj: any) => {
+    const type = obj.state.type;
+    const happiness = obj.state.happiness || 50;
+
+    if (type === "chicken") {
+      // Chicken body
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(x - 8, y - 15, 16, 12);
+      ctx.fillRect(x - 6, y - 21, 12, 8);
+
+      // Beak
+      ctx.fillStyle = "#FFA500";
+      ctx.fillRect(x + 6, y - 17, 4, 3);
+
+      // Eye
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(x + 2, y - 19, 2, 2);
+
+      // Legs
+      ctx.fillStyle = "#FFA500";
+      ctx.fillRect(x - 4, y - 3, 2, 6);
+      ctx.fillRect(x + 2, y - 3, 2, 6);
+    } else if (type === "cow") {
+      // Cow body
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(x - 16, y - 20, 32, 16);
+      ctx.fillRect(x - 10, y - 28, 20, 12);
+
+      // Spots
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(x - 10, y - 16, 6, 6);
+      ctx.fillRect(x + 4, y - 16, 6, 6);
+
+      // Legs
+      ctx.fillRect(x - 12, y - 4, 4, 10);
+      ctx.fillRect(x + 8, y - 4, 4, 10);
+    }
+
+    // Happiness indicator
+    if (happiness > 70) {
+      ctx.fillStyle = "#FF69B4";
+      ctx.beginPath();
+      ctx.arc(x, y - 30, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+
+  const renderVillager = (ctx: CanvasRenderingContext2D, x: number, y: number, obj: any) => {
+    const friendshipLevel = obj.state.friendshipLevel || 0;
+
+    // Head
+    ctx.fillStyle = "#FFD1A4";
+    ctx.fillRect(x - 8, y - 32, 16, 16);
+
+    // Hair
+    ctx.fillStyle = "#8B4513";
+    ctx.fillRect(x - 8, y - 36, 16, 6);
+
+    // Body
+    ctx.fillStyle = "#4169E1";
+    ctx.fillRect(x - 10, y - 16, 20, 16);
+
+    // Legs
+    ctx.fillStyle = "#2F4F4F";
+    ctx.fillRect(x - 8, y, 6, 12);
+    ctx.fillRect(x + 2, y, 6, 12);
+
+    // Friendship hearts
+    for (let i = 0; i < Math.min(friendshipLevel, 5); i++) {
+      ctx.fillStyle = "#FF69B4";
+      ctx.fillRect(x - 20 + i * 6, y - 40, 4, 4);
+    }
+  };
+
+  const renderFacility = (ctx: CanvasRenderingContext2D, x: number, y: number, obj: any) => {
+    // Building
+    ctx.fillStyle = "#CD853F";
+    ctx.fillRect(x - 30, y - 50, 60, 50);
+
+    // Roof
+    ctx.fillStyle = "#8B4513";
+    ctx.beginPath();
+    ctx.moveTo(x - 35, y - 50);
+    ctx.lineTo(x, y - 65);
+    ctx.lineTo(x + 35, y - 50);
+    ctx.closePath();
+    ctx.fill();
+
+    // Door
+    ctx.fillStyle = obj.state.isOpen ? "#654321" : "#3D2817";
+    ctx.fillRect(x - 8, y - 10, 16, 10);
+
+    // Windows
+    ctx.fillStyle = "#87CEEB";
+    ctx.fillRect(x - 20, y - 35, 10, 10);
+    ctx.fillRect(x + 10, y - 35, 10, 10);
+  };
+
+  // Watch for state changes and trigger re-render
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setForceUpdate(prev => prev + 1);
+    }, 100);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Watch for state changes and render
