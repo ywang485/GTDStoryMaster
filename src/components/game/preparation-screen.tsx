@@ -52,7 +52,6 @@ export function PreparationScreen() {
     setPlotStructure,
     setCharacter,
     setTasks,
-    enableToolSystem,
     syncTasksFromTool,
   } = useGameStore();
   const { initializeTodoList } = useToolStore();
@@ -164,28 +163,19 @@ export function PreparationScreen() {
       setTasks(gameTasks);
 
       // Initialize TodoList tool with tasks
-      try {
-        const migratedTasks = migrateTasksToTodoList(gameTasks);
-        await initializeTodoList(migratedTasks);
+      const migratedTasks = migrateTasksToTodoList(gameTasks);
+      await initializeTodoList(migratedTasks);
 
-        // Set first task to in_progress (equivalent to active)
-        if (gameTasks.length > 0) {
-          const toolStore = useToolStore.getState();
-          await toolStore.updateTaskStatus(gameTasks[0].id, "in_progress");
-        }
-
-        // Enable tool system in game store
-        enableToolSystem();
-
-        // Sync tasks from tool to game store
-        syncTasksFromTool();
-
-        console.log("✅ TodoList tool initialized successfully");
-      } catch (err) {
-        console.error("⚠️ Failed to initialize TodoList tool:", err);
-        console.log("Falling back to legacy task management");
-        // Tool initialization failed, continue with legacy system
+      // Set first task to in_progress (equivalent to active)
+      if (gameTasks.length > 0) {
+        const toolStore = useToolStore.getState();
+        await toolStore.updateTaskStatus(gameTasks[0].id, "in_progress");
       }
+
+      // Sync tasks from tool to game store
+      syncTasksFromTool();
+
+      console.log("✅ TodoList tool initialized successfully");
 
       setPhase("playing");
       setStage("ready");
@@ -208,7 +198,6 @@ export function PreparationScreen() {
     setPhase,
     router,
     initializeTodoList,
-    enableToolSystem,
     syncTasksFromTool,
   ]);
 

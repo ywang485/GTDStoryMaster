@@ -19,8 +19,7 @@ interface GameState {
   turnCount: number;
   currentSceneId: string | null;
   environment: EnvironmentContext;
-  tasks: Task[];
-  useToolSystem: boolean; // Flag to enable tool-based task management
+  tasks: Task[]; // Cached tasks from tool for performance
 
   // Actions
   setPhase: (phase: GamePhase) => void;
@@ -37,9 +36,8 @@ interface GameState {
   incrementTurn: () => void;
   setEnvironment: (env: Partial<EnvironmentContext>) => void;
   resetGame: () => void;
-  enableToolSystem: () => void;
-  getTasks: () => Task[]; // Get tasks from tool or fallback to local
-  syncTasksFromTool: () => void; // Sync tasks from tool to local state
+  getTasks: () => Task[]; // Get tasks from tool
+  syncTasksFromTool: () => void; // Sync tasks from tool to local cache
 }
 
 const defaultEnvironment: EnvironmentContext = {
@@ -62,8 +60,7 @@ export const useGameStore = create<GameState>()(
       turnCount: 0,
       currentSceneId: null,
       environment: defaultEnvironment,
-      tasks: [],
-      useToolSystem: false, // Start with tool system disabled for backwards compatibility
+      tasks: [], // Cached from tool
 
       setPhase: (phase) => set({ phase }),
 
@@ -82,37 +79,9 @@ export const useGameStore = create<GameState>()(
       setTasks: (tasks) => set({ tasks }),
 
       reorderTasks: async (taskIds) => {
-        const state = get();
-
-        // If tool system is enabled, delegate to tool
-        if (state.useToolSystem) {
-          const toolStore = useToolStore.getState();
-          await toolStore.reorderTasks(taskIds);
-          get().syncTasksFromTool();
-        } else {
-          // Legacy implementation
-          set((state) => {
-            const taskMap = new Map(state.tasks.map((t) => [t.id, t]));
-            const reorderedTasks: Task[] = [];
-            const usedIds = new Set<string>();
-
-            for (const id of taskIds) {
-              const task = taskMap.get(id);
-              if (task) {
-                reorderedTasks.push(task);
-                usedIds.add(id);
-              }
-            }
-
-            for (const task of state.tasks) {
-              if (!usedIds.has(task.id)) {
-                reorderedTasks.push(task);
-              }
-            }
-
-            return { tasks: reorderedTasks };
-          });
-        }
+        const toolStore = useToolStore.getState();
+        await toolStore.reorderTasks(taskIds);
+        get().syncTasksFromTool();
       },
 
       addNarrativeEntry: (entry) =>
@@ -121,72 +90,40 @@ export const useGameStore = create<GameState>()(
         })),
 
       completeTask: async (taskId) => {
-        const state = get();
+        const toolStore = useToolStore.getState();
+        await toolStore.updateTaskStatus(taskId, "completed");
+        get().syncTasksFromTool();
 
-        if (state.useToolSystem) {
-          const toolStore = useToolStore.getState();
-          await toolStore.updateTaskStatus(taskId, "completed");
-          get().syncTasksFromTool();
-        } else {
-          set((state) => ({
-            completedTaskIds: [...new Set([...state.completedTaskIds, taskId])],
-            tasks: state.tasks.map((t) =>
-              t.id === taskId ? { ...t, status: "completed" as const } : t,
-            ),
-          }));
-        }
-
-        // Always update completedTaskIds for backwards compatibility
+        // Update completedTaskIds for backwards compatibility
         set((state) => ({
           completedTaskIds: [...new Set([...state.completedTaskIds, taskId])],
         }));
       },
 
       skipTask: async (taskId) => {
-        const state = get();
+        const toolStore = useToolStore.getState();
+        await toolStore.updateTaskStatus(taskId, "cancelled");
+        get().syncTasksFromTool();
 
-        if (state.useToolSystem) {
-          const toolStore = useToolStore.getState();
-          await toolStore.updateTaskStatus(taskId, "cancelled");
-          get().syncTasksFromTool();
-        } else {
-          set((state) => ({
-            completedTaskIds: [...new Set([...state.completedTaskIds, taskId])],
-            tasks: state.tasks.map((t) =>
-              t.id === taskId ? { ...t, status: "skipped" as const } : t,
-            ),
-          }));
-        }
-
-        // Always update completedTaskIds for backwards compatibility
+        // Update completedTaskIds for backwards compatibility
         set((state) => ({
           completedTaskIds: [...new Set([...state.completedTaskIds, taskId])],
         }));
       },
 
       updateTaskStatus: async (taskId, status) => {
-        const state = get();
-
-        if (state.useToolSystem) {
-          const toolStore = useToolStore.getState();
-          // Map old status to new status
-          const newStatus =
-            status === "active"
-              ? "in_progress"
-              : status === "skipped"
-                ? "cancelled"
-                : status === "completed"
-                  ? "completed"
-                  : "pending";
-          await toolStore.updateTaskStatus(taskId, newStatus);
-          get().syncTasksFromTool();
-        } else {
-          set((state) => ({
-            tasks: state.tasks.map((t) =>
-              t.id === taskId ? { ...t, status } : t,
-            ),
-          }));
-        }
+        const toolStore = useToolStore.getState();
+        // Map old status to new status
+        const newStatus =
+          status === "active"
+            ? "in_progress"
+            : status === "skipped"
+              ? "cancelled"
+              : status === "completed"
+                ? "completed"
+                : "pending";
+        await toolStore.updateTaskStatus(taskId, newStatus);
+        get().syncTasksFromTool();
       },
 
       setCurrentScene: (sceneId) => set({ currentSceneId: sceneId }),
@@ -200,13 +137,9 @@ export const useGameStore = create<GameState>()(
         })),
 
       resetGame: async () => {
-        const state = get();
-
-        // Reset tool if using tool system
-        if (state.useToolSystem) {
-          const toolStore = useToolStore.getState();
-          await toolStore.resetTool();
-        }
+        // Reset tool
+        const toolStore = useToolStore.getState();
+        await toolStore.resetTool();
 
         set({
           phase: "setup",
@@ -219,34 +152,23 @@ export const useGameStore = create<GameState>()(
           currentSceneId: null,
           environment: defaultEnvironment,
           tasks: [],
-          useToolSystem: false,
         });
       },
 
-      enableToolSystem: () => set({ useToolSystem: true }),
-
       getTasks: () => {
-        const state = get();
-
-        if (state.useToolSystem) {
-          const toolStore = useToolStore.getState();
-          if (toolStore.todoListState) {
-            return getOrderedTasksFromTool(toolStore.todoListState.instances);
-          }
+        const toolStore = useToolStore.getState();
+        if (toolStore.todoListState) {
+          return getOrderedTasksFromTool(toolStore.todoListState.instances);
         }
-
-        return state.tasks;
+        // Fallback to cached tasks if tool not initialized
+        return get().tasks;
       },
 
       syncTasksFromTool: () => {
-        const state = get();
-
-        if (state.useToolSystem) {
-          const toolStore = useToolStore.getState();
-          if (toolStore.todoListState) {
-            const tasks = getOrderedTasksFromTool(toolStore.todoListState.instances);
-            set({ tasks });
-          }
+        const toolStore = useToolStore.getState();
+        if (toolStore.todoListState) {
+          const tasks = getOrderedTasksFromTool(toolStore.todoListState.instances);
+          set({ tasks });
         }
       },
     }),

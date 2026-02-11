@@ -82,7 +82,6 @@ function AdventureGame() {
     setEnvironment,
     setPhase,
     getTasks,
-    useToolSystem,
   } = useGameStore();
 
   const { profile, storyWorld } = useSetupStore();
@@ -142,13 +141,11 @@ function AdventureGame() {
       const env = getCurrentEnvironment(environment.mood, environment.weather);
       setEnvironment(env);
 
-      // Get current tasks (from tool if enabled, otherwise from game store)
-      const currentTasks = useToolSystem ? getTasks() : tasks;
+      // Get current tasks from tool
+      const currentTasks = getTasks();
 
-      // Get tool states if tool system is enabled
-      const toolStates = useToolSystem
-        ? { todoList: getToolPublicStates() }
-        : undefined;
+      // Get tool states for AI context
+      const toolStates = { todoList: getToolPublicStates() };
 
       const turnContext = buildTurnContext({
         turnNumber: turnCount + 1,
