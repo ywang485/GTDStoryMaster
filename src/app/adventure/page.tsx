@@ -366,9 +366,20 @@ function AdventureGame() {
       }
 
       if (update.taskStatusUpdates) {
+        const toolStore = useToolStore.getState();
         for (const u of update.taskStatusUpdates) {
-          updateTaskStatus(u.taskId, u.status);
+          // Map old status to new status
+          const newStatus =
+            u.status === "active"
+              ? "in_progress"
+              : u.status === "skipped"
+                ? "cancelled"
+                : u.status === "completed"
+                  ? "completed"
+                  : "pending";
+          await toolStore.updateTaskStatus(u.taskId, newStatus);
         }
+        syncTasksFromTool();
       }
 
       if (update.newSceneId) {
@@ -396,7 +407,7 @@ function AdventureGame() {
       turnCount,
       completeTask,
       skipTask,
-      updateTaskStatus,
+      syncTasksFromTool,
       setCurrentScene,
       setPhase,
       addNarrativeEntry,
