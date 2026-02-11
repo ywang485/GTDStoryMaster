@@ -7,6 +7,7 @@
 
 export { StoryWorldExecutor, createStoryWorldExecutor } from "./storyworld-executor";
 export { fantasyWorld } from "./examples/fantasy-world";
+export { stardewValleyWorld } from "./examples/stardew-valley-world";
 
 export type {
   // Core types
