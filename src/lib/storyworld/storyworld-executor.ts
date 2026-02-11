@@ -321,7 +321,7 @@ export class StoryWorldExecutor {
       });
     }
 
-    // Store narrative
+    // Store narrative and create display instruction
     if (narrativeText) {
       this.state.narrativeHistory.push({
         timestamp: now,
@@ -329,6 +329,26 @@ export class StoryWorldExecutor {
         sourceObjectId: objectId,
         sourceAction: actionId,
       });
+
+      // Automatically create a display_text render instruction
+      const narrativeInstruction: RenderInstruction = {
+        type: "display_text",
+        text: narrativeText,
+        style: {
+          waitForClick: true,
+          animation: "typewriter",
+          speed: 40,
+        },
+      };
+
+      this.state.activeRenders.push({
+        id: `narrative-${now}`,
+        instruction: narrativeInstruction,
+        startTime: now,
+      });
+
+      // Add to render instructions for the result
+      renderInstructions.push(narrativeInstruction);
     }
 
     // Execute side effects
