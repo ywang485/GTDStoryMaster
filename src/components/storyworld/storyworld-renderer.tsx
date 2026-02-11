@@ -52,6 +52,7 @@ export function StoryWorldRenderer({
     tileIndex?: number;
     tileSize?: number;
     tilesPerRow?: number;
+    scale?: number;
   }>>(new Map());
 
   // Initialize systems
@@ -83,6 +84,7 @@ export function StoryWorldRenderer({
                 tileIndex: asset.tileIndex,
                 tileSize: asset.tileSize || 16,
                 tilesPerRow: asset.tilesPerRow || 16,
+                scale: asset.scale || 4.0,
               });
 
               // Load the tileset image if not already loaded
@@ -197,13 +199,14 @@ export function StoryWorldRenderer({
       const metadata = spriteId ? spriteMetadata.current.get(spriteId) : null;
 
       if (spriteImage) {
-        // Draw the sprite image
-        const spriteWidth = 64;
-        const spriteHeight = 64;
+        // Get sprite dimensions from metadata
+        const tileSize = metadata?.tileSize || 16;
+        const scale = metadata?.scale || 4.0;
+        const spriteWidth = tileSize * scale;
+        const spriteHeight = tileSize * scale;
 
         if (metadata?.tileIndex !== undefined) {
           // Draw from tileset using tile index
-          const tileSize = metadata.tileSize || 16;
           const tilesPerRow = metadata.tilesPerRow || 16;
           const tileIndex = metadata.tileIndex;
 
