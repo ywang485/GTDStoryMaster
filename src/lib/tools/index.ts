@@ -50,3 +50,15 @@ export {
   todoListToolDefinition,
   TodoListToolExecutor
 } from './examples/todo-list-tool';
+
+// Migration utilities
+export {
+  migrateTaskStatus,
+  migrateTaskPriority,
+  convertTaskToTodoTaskParams,
+  convertTodoTaskToTask,
+  migrateTasksToTodoList,
+  extractTasksFromToolState,
+  getTaskOrderFromTool,
+  getOrderedTasksFromTool
+} from './migration';

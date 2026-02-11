@@ -23,6 +23,10 @@ export interface TurnContext {
   plotSoFar: NarrativeEntry[];
   playerInput: string;
   environment: EnvironmentContext;
+  // Tool states for external tool integration
+  toolStates?: {
+    todoList?: Record<string, Record<string, unknown>>;
+  };
 }
 
 export interface PlayerAction {
