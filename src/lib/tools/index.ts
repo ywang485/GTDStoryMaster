@@ -45,3 +45,8 @@ export {
   pomodoroToolDefinition,
   PomodoroToolExecutor
 } from './examples/pomodoro-tool';
+
+export {
+  todoListToolDefinition,
+  TodoListToolExecutor
+} from './examples/todo-list-tool';
