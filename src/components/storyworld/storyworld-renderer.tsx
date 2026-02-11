@@ -42,6 +42,7 @@ export function StoryWorldRenderer({
   const [isTyping, setIsTyping] = useState(false);
   const [activeAnimations, setActiveAnimations] = useState<Set<string>>(new Set());
   const [, setForceUpdate] = useState(0);
+  const processedRenders = useRef<Set<string>>(new Set());
 
   // Initialize systems
   useEffect(() => {
@@ -68,6 +69,18 @@ export function StoryWorldRenderer({
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
+
+    // Process new render instructions
+    const state = executor.getState();
+    state.activeRenders.forEach((render) => {
+      if (!processedRenders.current.has(render.id)) {
+        processedRenders.current.add(render.id);
+        executeRenderInstruction(render.instruction);
+      }
+    });
+
+    // Clean up expired renders
+    executor.cleanupExpiredRenders();
 
     // Clear canvas
     ctx.fillStyle = "#87CEEB";
@@ -263,34 +276,16 @@ export function StoryWorldRenderer({
     ctx.fillRect(x + 10, y - 35, 10, 10);
   };
 
-  // Watch for state changes and trigger re-render
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setForceUpdate(prev => prev + 1);
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Watch for state changes and render
-  useEffect(() => {
-    const state = executor.getState();
-
-    // Render active instructions
-    state.activeRenders.forEach((render) => {
-      executeRenderInstruction(render.instruction);
-    });
-
-    // Clean up expired renders
-    executor.cleanupExpiredRenders();
-  }, [executor]);
+  // No longer needed - renderScene handles everything
 
   const executeRenderInstruction = useCallback(
     (instruction: RenderInstruction) => {
       const id = `${instruction.type}-${Date.now()}`;
+      console.log("Executing render instruction:", instruction.type, instruction);
 
       switch (instruction.type) {
         case "display_text":
+          console.log("Displaying text:", instruction.text);
           handleDisplayText(instruction);
           break;
 
@@ -343,16 +338,21 @@ export function StoryWorldRenderer({
 
     const style = instruction.style || {};
 
-    // Check if this is sentence-by-sentence rendering
+    // For click-to-advance, show immediately if nothing is showing
     if (style.waitForClick) {
-      // Add to narrative queue
-      setNarrativeQueue((prev) => [...prev, instruction.text!]);
+      if (!currentNarrative && !isTyping) {
+        // Show this one immediately
+        typewriterEffect(instruction.text, style.speed || 40);
+      } else {
+        // Queue it for later
+        setNarrativeQueue((prev) => [...prev, instruction.text!]);
+      }
     } else {
-      // Show immediately
-      setCurrentNarrative(instruction.text);
-
+      // Show immediately without queue
       if (style.animation === "typewriter") {
         typewriterEffect(instruction.text, style.speed || 50);
+      } else {
+        setCurrentNarrative(instruction.text);
       }
     }
   };
