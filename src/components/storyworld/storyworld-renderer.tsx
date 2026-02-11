@@ -100,8 +100,7 @@ export function StoryWorldRenderer({
       ctx.stroke();
     }
 
-    // Get current state and render objects
-    const state = executor.getState();
+    // Render objects from state
     const objects = Object.values(state.objects);
 
     objects.forEach((obj, index) => {
