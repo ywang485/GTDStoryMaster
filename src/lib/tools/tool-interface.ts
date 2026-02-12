@@ -46,6 +46,8 @@ export interface StateVariable {
   initialValue: unknown;
   /** Whether the state is read-only (can only be changed by internal logic) */
   isReadOnly?: boolean;
+  /** If provided, value is computed on-demand instead of stored. Receives the full ToolState. */
+  compute?: (toolState: ToolState) => unknown;
 }
 
 /**

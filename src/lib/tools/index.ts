@@ -29,6 +29,20 @@ export {
   createToolDefinition
 } from './tool-interface';
 
+// Base class and helpers
+export { BaseToolExecutor } from './base-tool-executor';
+export {
+  publicState,
+  privateState,
+  readonlyState,
+  computedState,
+  param,
+  optionalParam,
+  exogenousAction,
+  internalAction,
+  objectType
+} from './tool-helpers';
+
 // Registry
 export {
   DefaultToolRegistry,

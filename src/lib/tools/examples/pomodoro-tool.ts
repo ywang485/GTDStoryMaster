@@ -1,39 +1,43 @@
 /**
  * Example Tool Implementation: Pomodoro Timer
  *
- * This demonstrates how to implement a tool using the tool interface.
  * The Pomodoro tool manages:
  * - A root "Timer" object (singleton) managing global settings
  * - Multiple "Session" objects representing individual pomodoro sessions
  *
- * Exogenous Actions (externally triggerable):
+ * Exogenous Actions:
  * - Timer.start(): Start a new pomodoro session
  * - Timer.pause(): Pause the current session
  * - Timer.resume(): Resume a paused session
  * - Timer.complete(): Mark current session as complete
  * - Timer.configure(): Change timer settings
  *
- * Public States (for visualization):
+ * Public States:
  * - Timer: currentSessionId, totalSessions, settings
  * - Session: status, remainingSeconds, type, completedAt
  */
 
 import { z } from 'zod';
 import {
-  ToolDefinition,
   ToolMetadata,
   ToolIOSpecification,
-  ObjectTypeDefinition,
-  StateVariable,
-  ActionDefinition,
-  ActionParameter,
-  ToolExecutor,
   ToolState,
   ObjectInstance,
   ActionContext,
   ActionResult,
   createToolDefinition
 } from '../tool-interface';
+import { BaseToolExecutor } from '../base-tool-executor';
+import {
+  publicState,
+  privateState,
+  readonlyState,
+  param,
+  optionalParam,
+  exogenousAction,
+  internalAction,
+  objectType
+} from '../tool-helpers';
 
 // ============================================================================
 // Schemas
@@ -66,272 +70,101 @@ const ToolOutputSchema = z.object({
 // State Variables
 // ============================================================================
 
-const timerStateVariables: StateVariable[] = [
-  {
-    name: 'currentSessionId',
-    description: 'ID of the currently active session (null if no active session)',
-    schema: z.string().nullable(),
-    isPublic: true,
-    initialValue: null
-  },
-  {
-    name: 'settings',
-    description: 'Timer configuration settings',
-    schema: TimerSettingsSchema,
-    isPublic: true,
-    initialValue: {
-      workDurationMinutes: 25,
-      shortBreakMinutes: 5,
-      longBreakMinutes: 15,
-      sessionsUntilLongBreak: 4
-    }
-  },
-  {
-    name: 'totalSessions',
-    description: 'Total number of completed sessions',
-    schema: z.number(),
-    isPublic: true,
-    initialValue: 0
-  },
-  {
-    name: 'currentStreak',
-    description: 'Current streak of completed work sessions',
-    schema: z.number(),
-    isPublic: true,
-    initialValue: 0
-  },
-  {
-    name: 'lastSessionEndTime',
-    description: 'Timestamp of last session end (internal)',
-    schema: z.date().nullable(),
-    isPublic: false,
-    initialValue: null,
-    isReadOnly: true
-  }
+const timerStateVariables = [
+  publicState('currentSessionId', z.string().nullable(), null, 'ID of the currently active session'),
+  publicState('settings', TimerSettingsSchema, {
+    workDurationMinutes: 25,
+    shortBreakMinutes: 5,
+    longBreakMinutes: 15,
+    sessionsUntilLongBreak: 4
+  }, 'Timer configuration settings'),
+  publicState('totalSessions', z.number(), 0, 'Total number of completed sessions'),
+  publicState('currentStreak', z.number(), 0, 'Current streak of completed work sessions'),
+  readonlyState('lastSessionEndTime', z.date().nullable(), null, 'Timestamp of last session end'),
 ];
 
-const sessionStateVariables: StateVariable[] = [
-  {
-    name: 'status',
-    description: 'Current status of the session',
-    schema: SessionStatusSchema,
-    isPublic: true,
-    initialValue: 'active'
-  },
-  {
-    name: 'type',
-    description: 'Type of session (work, short break, or long break)',
-    schema: SessionTypeSchema,
-    isPublic: true,
-    initialValue: 'work'
-  },
-  {
-    name: 'durationSeconds',
-    description: 'Total duration of this session in seconds',
-    schema: z.number(),
-    isPublic: true,
-    initialValue: 1500 // 25 minutes
-  },
-  {
-    name: 'elapsedSeconds',
-    description: 'Elapsed time in seconds',
-    schema: z.number(),
-    isPublic: true,
-    initialValue: 0
-  },
-  {
-    name: 'remainingSeconds',
-    description: 'Remaining time in seconds',
-    schema: z.number(),
-    isPublic: true,
-    initialValue: 1500
-  },
-  {
-    name: 'startedAt',
-    description: 'Session start timestamp',
-    schema: z.date(),
-    isPublic: true,
-    initialValue: new Date()
-  },
-  {
-    name: 'pausedAt',
-    description: 'Session pause timestamp (null if not paused)',
-    schema: z.date().nullable(),
-    isPublic: false,
-    initialValue: null
-  },
-  {
-    name: 'completedAt',
-    description: 'Session completion timestamp (null if not completed)',
-    schema: z.date().nullable(),
-    isPublic: true,
-    initialValue: null
-  },
-  {
-    name: 'associatedTaskId',
-    description: 'ID of associated GTD task (if any)',
-    schema: z.string().nullable(),
-    isPublic: true,
-    initialValue: null
-  }
-];
-
-// ============================================================================
-// Action Parameters
-// ============================================================================
-
-const startSessionParams: ActionParameter[] = [
-  {
-    name: 'type',
-    description: 'Type of session to start',
-    schema: SessionTypeSchema,
-    required: false,
-    defaultValue: 'work'
-  },
-  {
-    name: 'taskId',
-    description: 'Associated task ID',
-    schema: z.string(),
-    required: false
-  }
-];
-
-const configureParams: ActionParameter[] = [
-  {
-    name: 'settings',
-    description: 'New timer settings',
-    schema: TimerSettingsSchema.partial(),
-    required: true
-  }
+const sessionStateVariables = [
+  publicState('status', SessionStatusSchema, 'active', 'Current status of the session'),
+  publicState('type', SessionTypeSchema, 'work', 'Type of session'),
+  publicState('durationSeconds', z.number(), 1500, 'Total duration in seconds'),
+  publicState('elapsedSeconds', z.number(), 0, 'Elapsed time in seconds'),
+  publicState('remainingSeconds', z.number(), 1500, 'Remaining time in seconds'),
+  publicState('startedAt', z.date(), new Date(), 'Session start timestamp'),
+  privateState('pausedAt', z.date().nullable(), null, 'Session pause timestamp'),
+  publicState('completedAt', z.date().nullable(), null, 'Session completion timestamp'),
+  publicState('associatedTaskId', z.string().nullable(), null, 'ID of associated GTD task'),
 ];
 
 // ============================================================================
 // Actions
 // ============================================================================
 
-const timerActions: ActionDefinition[] = [
-  {
-    name: 'start',
+const timerActions = [
+  exogenousAction('start', {
     description: 'Start a new pomodoro session',
-    parameters: startSessionParams,
-    isExogenous: true,
-    affectedStates: ['currentSessionId'],
-    returnSchema: z.object({
-      sessionId: z.string(),
-      type: SessionTypeSchema,
-      durationSeconds: z.number()
-    })
-  },
-  {
-    name: 'pause',
+    params: [
+      optionalParam('type', SessionTypeSchema, 'work', 'Type of session to start'),
+      optionalParam('taskId', z.string(), undefined, 'Associated task ID'),
+    ],
+    affects: ['currentSessionId'],
+    returns: z.object({ sessionId: z.string(), type: SessionTypeSchema, durationSeconds: z.number() })
+  }),
+  exogenousAction('pause', {
     description: 'Pause the current active session',
-    parameters: [],
-    isExogenous: true,
-    affectedStates: ['currentSessionId'],
-    returnSchema: z.object({
-      success: z.boolean(),
-      pausedAt: z.date()
-    })
-  },
-  {
-    name: 'resume',
+    affects: ['currentSessionId'],
+    returns: z.object({ success: z.boolean(), pausedAt: z.date() })
+  }),
+  exogenousAction('resume', {
     description: 'Resume a paused session',
-    parameters: [],
-    isExogenous: true,
-    affectedStates: ['currentSessionId'],
-    returnSchema: z.object({
-      success: z.boolean(),
-      resumedAt: z.date()
-    })
-  },
-  {
-    name: 'complete',
+    affects: ['currentSessionId'],
+    returns: z.object({ success: z.boolean(), resumedAt: z.date() })
+  }),
+  exogenousAction('complete', {
     description: 'Mark current session as complete',
-    parameters: [],
-    isExogenous: true,
-    affectedStates: ['currentSessionId', 'totalSessions', 'currentStreak', 'lastSessionEndTime'],
-    returnSchema: z.object({
-      success: z.boolean(),
-      completedAt: z.date(),
-      newStreak: z.number()
-    })
-  },
-  {
-    name: 'configure',
+    affects: ['currentSessionId', 'totalSessions', 'currentStreak', 'lastSessionEndTime'],
+    returns: z.object({ success: z.boolean(), completedAt: z.date(), newStreak: z.number() })
+  }),
+  exogenousAction('configure', {
     description: 'Update timer settings',
-    parameters: configureParams,
-    isExogenous: true,
-    affectedStates: ['settings'],
-    returnSchema: z.object({
-      success: z.boolean(),
-      newSettings: TimerSettingsSchema
-    })
-  },
-  {
-    name: 'tick',
-    description: 'Internal tick to update session time (called by executor)',
-    parameters: [],
-    isExogenous: false,
-    affectedStates: ['currentSessionId']
-  }
+    params: [param('settings', TimerSettingsSchema.partial(), true, 'New timer settings')],
+    affects: ['settings'],
+    returns: z.object({ success: z.boolean(), newSettings: TimerSettingsSchema })
+  }),
+  internalAction('tick', {
+    description: 'Internal tick to update session time',
+    affects: ['currentSessionId']
+  }),
 ];
 
-const sessionActions: ActionDefinition[] = [
-  {
-    name: 'updateProgress',
-    description: 'Update session elapsed/remaining time (internal)',
-    parameters: [
-      {
-        name: 'elapsedSeconds',
-        description: 'New elapsed time',
-        schema: z.number(),
-        required: true
-      }
-    ],
-    isExogenous: false,
-    affectedStates: ['elapsedSeconds', 'remainingSeconds']
-  },
-  {
-    name: 'setStatus',
-    description: 'Change session status (internal)',
-    parameters: [
-      {
-        name: 'status',
-        description: 'New status',
-        schema: SessionStatusSchema,
-        required: true
-      }
-    ],
-    isExogenous: false,
-    affectedStates: ['status', 'pausedAt', 'completedAt']
-  }
+const sessionActions = [
+  internalAction('updateProgress', {
+    description: 'Update session elapsed/remaining time',
+    params: [param('elapsedSeconds', z.number(), true, 'New elapsed time')],
+    affects: ['elapsedSeconds', 'remainingSeconds']
+  }),
+  internalAction('setStatus', {
+    description: 'Change session status',
+    params: [param('status', SessionStatusSchema, true, 'New status')],
+    affects: ['status', 'pausedAt', 'completedAt']
+  }),
 ];
 
 // ============================================================================
-// Object Type Definitions
+// Object Types & Tool Definition
 // ============================================================================
 
-const timerObjectType: ObjectTypeDefinition = {
-  typeName: 'Timer',
+const timerObjectType = objectType('Timer', {
   description: 'Singleton root object managing the pomodoro timer',
-  isRoot: true,
+  root: true,
   states: timerStateVariables,
   actions: timerActions,
-  maxInstances: 1
-};
+});
 
-const sessionObjectType: ObjectTypeDefinition = {
-  typeName: 'Session',
+const sessionObjectType = objectType('Session', {
   description: 'Individual pomodoro session instance',
-  isRoot: false,
   states: sessionStateVariables,
-  actions: sessionActions
-  // No maxInstances = unlimited
-};
-
-// ============================================================================
-// Tool Definition
-// ============================================================================
+  actions: sessionActions,
+});
 
 const pomodoroMetadata: ToolMetadata = {
   name: 'pomodoro-timer',
@@ -366,9 +199,7 @@ const pomodoroIO: ToolIOSpecification = {
       longBreakMinutes: 15,
       sessionsUntilLongBreak: 4
     },
-    taskContext: {
-      currentTaskId: 'task-123'
-    }
+    taskContext: { currentTaskId: 'task-123' }
   },
   exampleOutput: {
     totalWorkTime: 3600,
@@ -378,94 +209,49 @@ const pomodoroIO: ToolIOSpecification = {
   }
 };
 
-export const pomodoroToolDefinition: ToolDefinition = createToolDefinition(
+export const pomodoroToolDefinition = createToolDefinition(
   pomodoroMetadata,
   pomodoroIO,
   [timerObjectType, sessionObjectType]
 );
 
 // ============================================================================
-// Tool Executor Implementation
+// Executor
 // ============================================================================
 
-export class PomodoroToolExecutor implements ToolExecutor {
-  definition: ToolDefinition;
-  private state: ToolState;
-  private rootInstanceId = 'timer-root';
-
+export class PomodoroToolExecutor extends BaseToolExecutor {
   constructor() {
-    this.definition = pomodoroToolDefinition;
-    this.state = {
-      toolName: pomodoroMetadata.name,
-      timestamp: new Date(),
-      instances: new Map()
-    };
+    super(pomodoroToolDefinition, 'timer-root');
   }
 
   async initialize(input: unknown): Promise<ToolState> {
     const parsed = ToolInputSchema.parse(input);
 
-    // Create root timer instance
-    const rootInstance: ObjectInstance = {
-      instanceId: this.rootInstanceId,
-      typeName: 'Timer',
-      state: {
-        currentSessionId: null,
-        settings: parsed.initialSettings ?? timerStateVariables[1].initialValue,
-        totalSessions: 0,
-        currentStreak: 0,
-        lastSessionEndTime: null
-      },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      metadata: parsed.taskContext
-    };
+    this.createRootInstance('Timer', {
+      currentSessionId: null,
+      settings: parsed.initialSettings ?? timerStateVariables[1].initialValue,
+      totalSessions: 0,
+      currentStreak: 0,
+      lastSessionEndTime: null
+    });
 
-    this.state.instances.set(this.rootInstanceId, rootInstance);
+    if (parsed.taskContext) {
+      this.getRootInstance().metadata = parsed.taskContext;
+    }
+
     this.state.timestamp = new Date();
-
     return this.state;
   }
 
-  async executeAction(context: ActionContext): Promise<ActionResult> {
-    const instance = this.state.instances.get(context.instanceId);
-    if (!instance) {
-      return {
-        success: false,
-        error: `Instance ${context.instanceId} not found`,
-        stateChanges: new Map()
-      };
-    }
+  // --- Action handlers (convention: action "start" → handleStart) -----------
 
-    // Route to appropriate action handler
-    switch (context.actionName) {
-      case 'start':
-        return this.handleStart(instance, context);
-      case 'pause':
-        return this.handlePause(instance, context);
-      case 'resume':
-        return this.handleResume(instance, context);
-      case 'complete':
-        return this.handleComplete(instance, context);
-      case 'configure':
-        return this.handleConfigure(instance, context);
-      default:
-        return {
-          success: false,
-          error: `Unknown action: ${context.actionName}`,
-          stateChanges: new Map()
-        };
-    }
-  }
-
-  private async handleStart(
+  protected async handleStart(
     timerInstance: ObjectInstance,
-    context: ActionContext
+    _context: ActionContext
   ): Promise<ActionResult> {
-    const params = context.parameters as { type?: string; taskId?: string };
+    const params = _context.parameters as { type?: string; taskId?: string };
     const sessionType = (params.type ?? 'work') as 'work' | 'short_break' | 'long_break';
 
-    // Determine duration based on type and settings
     const settings = timerInstance.state.settings as z.infer<typeof TimerSettingsSchema>;
     let durationMinutes: number;
     switch (sessionType) {
@@ -480,7 +266,6 @@ export class PomodoroToolExecutor implements ToolExecutor {
         break;
     }
 
-    // Create new session
     const sessionId = `session-${Date.now()}`;
     const durationSeconds = durationMinutes * 60;
     const sessionInstance: ObjectInstance = {
@@ -503,7 +288,6 @@ export class PomodoroToolExecutor implements ToolExecutor {
 
     this.state.instances.set(sessionId, sessionInstance);
 
-    // Update timer state
     const stateChanges = new Map<string, unknown>();
     stateChanges.set('currentSessionId', sessionId);
     timerInstance.state.currentSessionId = sessionId;
@@ -511,35 +295,23 @@ export class PomodoroToolExecutor implements ToolExecutor {
 
     return {
       success: true,
-      output: {
-        sessionId,
-        type: sessionType,
-        durationSeconds
-      },
+      output: { sessionId, type: sessionType, durationSeconds },
       stateChanges
     };
   }
 
-  private async handlePause(
+  protected async handlePause(
     timerInstance: ObjectInstance,
-    context: ActionContext
+    _context: ActionContext
   ): Promise<ActionResult> {
     const currentSessionId = timerInstance.state.currentSessionId as string | null;
     if (!currentSessionId) {
-      return {
-        success: false,
-        error: 'No active session to pause',
-        stateChanges: new Map()
-      };
+      return { success: false, error: 'No active session to pause', stateChanges: new Map() };
     }
 
     const session = this.state.instances.get(currentSessionId);
     if (!session) {
-      return {
-        success: false,
-        error: 'Current session not found',
-        stateChanges: new Map()
-      };
+      return { success: false, error: 'Current session not found', stateChanges: new Map() };
     }
 
     const now = new Date();
@@ -551,33 +323,21 @@ export class PomodoroToolExecutor implements ToolExecutor {
     stateChanges.set('status', 'paused');
     stateChanges.set('pausedAt', now);
 
-    return {
-      success: true,
-      output: { success: true, pausedAt: now },
-      stateChanges
-    };
+    return { success: true, output: { success: true, pausedAt: now }, stateChanges };
   }
 
-  private async handleResume(
+  protected async handleResume(
     timerInstance: ObjectInstance,
-    context: ActionContext
+    _context: ActionContext
   ): Promise<ActionResult> {
     const currentSessionId = timerInstance.state.currentSessionId as string | null;
     if (!currentSessionId) {
-      return {
-        success: false,
-        error: 'No session to resume',
-        stateChanges: new Map()
-      };
+      return { success: false, error: 'No session to resume', stateChanges: new Map() };
     }
 
     const session = this.state.instances.get(currentSessionId);
     if (!session || session.state.status !== 'paused') {
-      return {
-        success: false,
-        error: 'Session is not paused',
-        stateChanges: new Map()
-      };
+      return { success: false, error: 'Session is not paused', stateChanges: new Map() };
     }
 
     const now = new Date();
@@ -589,33 +349,21 @@ export class PomodoroToolExecutor implements ToolExecutor {
     stateChanges.set('status', 'active');
     stateChanges.set('pausedAt', null);
 
-    return {
-      success: true,
-      output: { success: true, resumedAt: now },
-      stateChanges
-    };
+    return { success: true, output: { success: true, resumedAt: now }, stateChanges };
   }
 
-  private async handleComplete(
+  protected async handleComplete(
     timerInstance: ObjectInstance,
-    context: ActionContext
+    _context: ActionContext
   ): Promise<ActionResult> {
     const currentSessionId = timerInstance.state.currentSessionId as string | null;
     if (!currentSessionId) {
-      return {
-        success: false,
-        error: 'No active session to complete',
-        stateChanges: new Map()
-      };
+      return { success: false, error: 'No active session to complete', stateChanges: new Map() };
     }
 
     const session = this.state.instances.get(currentSessionId);
     if (!session) {
-      return {
-        success: false,
-        error: 'Current session not found',
-        stateChanges: new Map()
-      };
+      return { success: false, error: 'Current session not found', stateChanges: new Map() };
     }
 
     const now = new Date();
@@ -623,7 +371,6 @@ export class PomodoroToolExecutor implements ToolExecutor {
     session.state.completedAt = now;
     session.updatedAt = now;
 
-    // Update timer statistics
     const stateChanges = new Map<string, unknown>();
     const isWorkSession = session.state.type === 'work';
 
@@ -655,7 +402,7 @@ export class PomodoroToolExecutor implements ToolExecutor {
     };
   }
 
-  private async handleConfigure(
+  protected async handleConfigure(
     timerInstance: ObjectInstance,
     context: ActionContext
   ): Promise<ActionResult> {
@@ -664,14 +411,9 @@ export class PomodoroToolExecutor implements ToolExecutor {
     const currentSettings = timerInstance.state.settings as z.infer<typeof TimerSettingsSchema>;
     const newSettings = { ...currentSettings, ...params.settings };
 
-    // Validate new settings
     const result = TimerSettingsSchema.safeParse(newSettings);
     if (!result.success) {
-      return {
-        success: false,
-        error: `Invalid settings: ${result.error.message}`,
-        stateChanges: new Map()
-      };
+      return { success: false, error: `Invalid settings: ${result.error.message}`, stateChanges: new Map() };
     }
 
     timerInstance.state.settings = result.data;
@@ -682,115 +424,8 @@ export class PomodoroToolExecutor implements ToolExecutor {
 
     return {
       success: true,
-      output: {
-        success: true,
-        newSettings: result.data
-      },
+      output: { success: true, newSettings: result.data },
       stateChanges
     };
-  }
-
-  getState(): ToolState {
-    return this.state;
-  }
-
-  getInstance(instanceId: string): ObjectInstance | undefined {
-    return this.state.instances.get(instanceId);
-  }
-
-  getInstancesByType(typeName: string): ObjectInstance[] {
-    return Array.from(this.state.instances.values()).filter(inst => inst.typeName === typeName);
-  }
-
-  exportPublicStates(): Record<string, Record<string, unknown>> {
-    const result: Record<string, Record<string, unknown>> = {};
-
-    for (const [instanceId, instance] of this.state.instances) {
-      const objectType = this.definition.objectTypes.find(t => t.typeName === instance.typeName);
-      if (!objectType) continue;
-
-      const publicState: Record<string, unknown> = {};
-      for (const stateVar of objectType.states) {
-        if (stateVar.isPublic) {
-          publicState[stateVar.name] = instance.state[stateVar.name];
-        }
-      }
-
-      result[instanceId] = publicState;
-    }
-
-    return result;
-  }
-
-  async createInstance(
-    typeName: string,
-    initialState?: Record<string, unknown>
-  ): Promise<ObjectInstance> {
-    const objectType = this.definition.objectTypes.find(t => t.typeName === typeName);
-    if (!objectType) {
-      throw new Error(`Object type ${typeName} not found`);
-    }
-
-    if (objectType.isRoot) {
-      throw new Error('Cannot create additional root instances');
-    }
-
-    // Check max instances
-    if (objectType.maxInstances !== undefined) {
-      const existing = this.getInstancesByType(typeName);
-      if (existing.length >= objectType.maxInstances) {
-        throw new Error(`Maximum instances (${objectType.maxInstances}) reached for ${typeName}`);
-      }
-    }
-
-    const instanceId = `${typeName.toLowerCase()}-${Date.now()}`;
-    const state: Record<string, unknown> = {};
-
-    // Initialize state with defaults
-    for (const stateVar of objectType.states) {
-      state[stateVar.name] = initialState?.[stateVar.name] ?? stateVar.initialValue;
-    }
-
-    const instance: ObjectInstance = {
-      instanceId,
-      typeName,
-      state,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    this.state.instances.set(instanceId, instance);
-    return instance;
-  }
-
-  async destroyInstance(instanceId: string): Promise<boolean> {
-    const instance = this.state.instances.get(instanceId);
-    if (!instance) {
-      return false;
-    }
-
-    if (instance.typeName === 'Timer') {
-      throw new Error('Cannot destroy root instance');
-    }
-
-    return this.state.instances.delete(instanceId);
-  }
-
-  async reset(): Promise<void> {
-    // Keep only root instance
-    const rootInstance = this.state.instances.get(this.rootInstanceId);
-    this.state.instances.clear();
-
-    if (rootInstance) {
-      // Reset root state to initial values
-      const timerType = this.definition.getRootType();
-      for (const stateVar of timerType.states) {
-        rootInstance.state[stateVar.name] = stateVar.initialValue;
-      }
-      rootInstance.updatedAt = new Date();
-      this.state.instances.set(this.rootInstanceId, rootInstance);
-    }
-
-    this.state.timestamp = new Date();
   }
 }
