@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSetupStore } from "@/stores/use-setup-store";
-import { storyWorldPresets } from "@/lib/storyworlds";
+import { storyWorldPresets } from "@/lib/storyworld_setup";
 import { cn } from "@/lib/utils/cn";
 
 export function StoryWorldPicker() {

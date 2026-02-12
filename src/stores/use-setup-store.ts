@@ -6,7 +6,7 @@ import type { PlayerProfile } from "@/types/player";
 import type { StoryWorld } from "@/types/storyworld";
 import type { Task } from "@/types/task";
 import type { AdventurerConfig } from "@/types/config";
-import { getPresetById } from "@/lib/storyworlds";
+import { getPresetById } from "@/lib/storyworld_setup";
 
 interface SetupState {
   profile: PlayerProfile;
