@@ -70,6 +70,12 @@ export const stardewValleyWorld: StoryWorldDefinition = {
           description: "Position on the farm",
           default: { x: 0, y: 0 },
         },
+        {
+          name: "wilted",
+          type: "boolean",
+          description: "Crop has wilted from lack of water",
+          default: false,
+        },
       ],
       actions: [
         {
@@ -161,6 +167,7 @@ export const stardewValleyWorld: StoryWorldDefinition = {
             preconditions: [
               { variable: "watered", operator: "==", value: true },
               { variable: "growthStage", operator: "<", value: 4 },
+              { variable: "wilted", operator: "==", value: false },
             ],
             customLogic: (params, state) => {
               const newStage = state.growthStage + 1;
@@ -274,6 +281,92 @@ export const stardewValleyWorld: StoryWorldDefinition = {
             narrativeText: "You carefully apply fertilizer around the plant. It'll grow stronger and produce higher quality crops!",
           },
         },
+        {
+          id: "wilt",
+          name: "Wilt",
+          description: "Crop wilts from lack of water (called daily if not watered)",
+          parameters: [],
+          logic: {
+            preconditions: [
+              { variable: "watered", operator: "==", value: false },
+              { variable: "wilted", operator: "==", value: false },
+              { variable: "growthStage", operator: ">", value: 0 },
+              { variable: "growthStage", operator: "<", value: 4 },
+            ],
+            stateChanges: [
+              { variable: "wilted", operation: "set", value: true },
+              { variable: "health", operation: "subtract", value: 20 },
+            ],
+            renderInstructions: [
+              {
+                type: "play_animation",
+                assetId: "crop-wilt",
+                duration: 1000,
+              },
+              {
+                type: "play_sound",
+                assetId: "wilt-sound",
+              },
+              {
+                type: "show_particle",
+                assetId: "dry-dust",
+                duration: 800,
+              },
+            ],
+            customLogic: (params, state) => ({
+              stateChanges: [
+                { variable: "wilted", operation: "set", value: true },
+                { variable: "health", operation: "subtract", value: 20 },
+              ],
+              narrativeText: `The ${state.type} droops and wilts from lack of water. Its leaves turn brown at the edges.`,
+            }),
+          },
+        },
+        {
+          id: "revive",
+          name: "Revive",
+          description: "Revive a wilted crop by watering it",
+          parameters: [],
+          logic: {
+            preconditions: [
+              { variable: "wilted", operator: "==", value: true },
+            ],
+            stateChanges: [
+              { variable: "wilted", operation: "set", value: false },
+              { variable: "watered", operation: "set", value: true },
+              { variable: "health", operation: "add", value: 10 },
+            ],
+            renderInstructions: [
+              {
+                type: "play_animation",
+                assetId: "watering-can",
+                duration: 1000,
+              },
+              {
+                type: "play_sound",
+                assetId: "water-splash",
+              },
+              {
+                type: "show_particle",
+                assetId: "water-droplets",
+                duration: 800,
+              },
+              {
+                type: "play_animation",
+                assetId: "crop-revive",
+                duration: 1500,
+              },
+            ],
+            customLogic: (params, state) => ({
+              stateChanges: [
+                { variable: "wilted", operation: "set", value: false },
+                { variable: "watered", operation: "set", value: true },
+                { variable: "health", operation: "add", value: 10 },
+              ],
+              narrativeText: `You water the wilted ${state.type}. Slowly, it perks back up as the water revitalizes it!`,
+            }),
+          },
+        },
       ],
       assets: {
         stateAssets: {
@@ -292,6 +385,9 @@ export const stardewValleyWorld: StoryWorldDefinition = {
           stage4: [
             { id: "mature", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 12, tileSize: 16, tilesPerRow: 16, scale: 2.0 },
           ],
+          wilted: [
+            { id: "wilted", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 13, tileSize: 16, tilesPerRow: 6, scale: 4.0 },
+          ],
         },
         actionAssets: {
           plant: [
@@ -308,6 +404,14 @@ export const stardewValleyWorld: StoryWorldDefinition = {
             { id: "harvest-crop", type: "animation", url: "/assets/farm/actions/harvest.json", metadata: { duration: 1200 } },
             { id: "harvest-sound", type: "sound", url: "/assets/farm/sfx/harvest.mp3", metadata: { volume: 0.7 } },
             { id: "collect-sparkle", type: "particle", url: "/assets/farm/particles/collect.json" },
+          ],
+          wilt: [
+            { id: "crop-wilt", type: "animation", url: "/assets/farm/actions/wilt.json", metadata: { duration: 1000 } },
+            { id: "wilt-sound", type: "sound", url: "/assets/farm/sfx/wilt.mp3", metadata: { volume: 0.4 } },
+            { id: "dry-dust", type: "particle", url: "/assets/farm/particles/dry.json" },
+          ],
+          revive: [
+            { id: "crop-revive", type: "animation", url: "/assets/farm/actions/revive.json", metadata: { duration: 1500 } },
           ],
         },
       },
