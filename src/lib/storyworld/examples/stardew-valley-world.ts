@@ -1,12 +1,13 @@
 /**
- * Stardew Valley Themed StoryWorld
+ * Stardew Valley Themed StoryWorld (Definition Only)
+ *
+ * Schema-only definition — all action logic lives in StardewValleyExecutor.
  *
  * A farming-themed storyworld with:
- * - Crops (plant, water, harvest)
+ * - Crops (water, grow, harvest)
  * - Village Facilities (shop, interact, upgrade)
  * - Villagers (relationship, dialogue, gifts)
  * - Livestock (feed, pet, collect produce)
- * - Sentence-by-sentence narrative rendering
  */
 
 import type { StoryWorldDefinition } from "@/types/storyworld-definition";
@@ -78,295 +79,12 @@ export const stardewValleyWorld: StoryWorldDefinition = {
         },
       ],
       actions: [
-        {
-          id: "plant",
-          name: "Plant",
-          description: "Plant a seed",
-          parameters: [
-            {
-              name: "cropType",
-              type: "string",
-              description: "Type of crop to plant",
-              required: true,
-            },
-            {
-              name: "season",
-              type: "string",
-              description: "Current season",
-              required: true,
-            },
-          ],
-          logic: {
-            customLogic: (params) => ({
-              stateChanges: [
-                { variable: "type", operation: "set", value: params.cropType },
-                { variable: "growthStage", operation: "set", value: 0 },
-                { variable: "season", operation: "set", value: params.season },
-                { variable: "health", operation: "set", value: 100 },
-              ],
-              renderInstructions: [
-                {
-                  type: "play_animation",
-                  assetId: "plant-seed",
-                  duration: 800,
-                },
-                {
-                  type: "play_sound",
-                  assetId: "dig-soil",
-                },
-                {
-                  type: "show_particle",
-                  assetId: "dirt-spray",
-                  duration: 500,
-                },
-              ],
-              narrativeText: `You plant ${params.cropType} seeds in the rich soil. The seeds nestle into the earth, ready to grow.`,
-            }),
-          },
-        },
-        {
-          id: "water",
-          name: "Water",
-          description: "Water the crop",
-          parameters: [],
-          logic: {
-            preconditions: [
-              { variable: "watered", operator: "==", value: false },
-              { variable: "growthStage", operator: "<", value: 4 },
-            ],
-            stateChanges: [
-              { variable: "watered", operation: "set", value: true },
-              { variable: "health", operation: "add", value: 5 },
-            ],
-            renderInstructions: [
-              {
-                type: "play_animation",
-                assetId: "watering-can",
-                duration: 1000,
-              },
-              {
-                type: "play_sound",
-                assetId: "water-splash",
-              },
-              {
-                type: "show_particle",
-                assetId: "water-droplets",
-                duration: 800,
-              },
-            ],
-            narrativeText: (params, state) =>
-              `Water cascades from the watering can onto the ${state.type}. The soil darkens as it drinks in the moisture.`,
-          },
-        },
-        {
-          id: "grow",
-          name: "Grow",
-          description: "Advance growth stage (called daily)",
-          parameters: [],
-          logic: {
-            preconditions: [
-              { variable: "watered", operator: "==", value: true },
-              { variable: "growthStage", operator: "<", value: 4 },
-              { variable: "wilted", operator: "==", value: false },
-            ],
-            customLogic: (params, state) => {
-              const newStage = state.growthStage + 1;
-              const isHarvestable = newStage >= 4;
-
-              return {
-                stateChanges: [
-                  { variable: "growthStage", operation: "add", value: 1 },
-                  { variable: "watered", operation: "set", value: false },
-                ],
-                renderInstructions: isHarvestable
-                  ? [
-                      {
-                        type: "play_animation",
-                        assetId: "crop-mature",
-                        duration: 1500,
-                      },
-                      {
-                        type: "play_sound",
-                        assetId: "growth-complete",
-                      },
-                      {
-                        type: "show_particle",
-                        assetId: "sparkle",
-                        duration: 1000,
-                      },
-                    ]
-                  : [
-                      {
-                        type: "play_animation",
-                        assetId: "crop-grow",
-                        duration: 800,
-                      },
-                    ],
-                narrativeText: isHarvestable
-                  ? `The ${state.type} has fully matured! Ripe and ready for harvest, it sways gently in the breeze.`
-                  : `The ${state.type} grows taller overnight. Stage ${newStage} of 4 complete.`,
-              };
-            },
-          },
-        },
-        {
-          id: "harvest",
-          name: "Harvest",
-          description: "Harvest the mature crop",
-          parameters: [],
-          logic: {
-            preconditions: [
-              { variable: "growthStage", operator: ">=", value: 4 },
-            ],
-            customLogic: (params, state) => {
-              const quality = state.health > 90 ? "gold star" : state.health > 70 ? "silver star" : "regular";
-              const quantity = state.fertilized ? 3 : 2;
-
-              return {
-                stateChanges: [
-                  { variable: "growthStage", operation: "set", value: 0 },
-                  { variable: "health", operation: "set", value: 0 },
-                ],
-                renderInstructions: [
-                  {
-                    type: "play_animation",
-                    assetId: "harvest-crop",
-                    duration: 1200,
-                  },
-                  {
-                    type: "play_sound",
-                    assetId: "harvest-sound",
-                  },
-                  {
-                    type: "show_particle",
-                    assetId: "collect-sparkle",
-                    duration: 1000,
-                  },
-                ],
-                narrativeText: `You harvest ${quantity} ${quality} ${state.type}! The fresh produce goes straight into your basket.`,
-              };
-            },
-          },
-        },
-        {
-          id: "fertilize",
-          name: "Fertilize",
-          description: "Apply fertilizer to boost growth",
-          parameters: [],
-          logic: {
-            preconditions: [
-              { variable: "fertilized", operator: "==", value: false },
-              { variable: "growthStage", operator: "<", value: 4 },
-            ],
-            stateChanges: [
-              { variable: "fertilized", operation: "set", value: true },
-              { variable: "health", operation: "add", value: 10 },
-            ],
-            renderInstructions: [
-              {
-                type: "play_animation",
-                assetId: "apply-fertilizer",
-                duration: 800,
-              },
-              {
-                type: "play_sound",
-                assetId: "fertilizer-sound",
-              },
-              {
-                type: "show_particle",
-                assetId: "nutrient-glow",
-                duration: 1200,
-              },
-            ],
-            narrativeText: "You carefully apply fertilizer around the plant. It'll grow stronger and produce higher quality crops!",
-          },
-        },
-        {
-          id: "wilt",
-          name: "Wilt",
-          description: "Crop wilts from lack of water (called daily if not watered)",
-          parameters: [],
-          logic: {
-            preconditions: [
-              { variable: "watered", operator: "==", value: false },
-              { variable: "wilted", operator: "==", value: false },
-              { variable: "growthStage", operator: ">", value: 0 },
-              { variable: "growthStage", operator: "<", value: 4 },
-            ],
-            stateChanges: [
-              { variable: "wilted", operation: "set", value: true },
-              { variable: "health", operation: "subtract", value: 20 },
-            ],
-            renderInstructions: [
-              {
-                type: "play_animation",
-                assetId: "crop-wilt",
-                duration: 1000,
-              },
-              {
-                type: "play_sound",
-                assetId: "wilt-sound",
-              },
-              {
-                type: "show_particle",
-                assetId: "dry-dust",
-                duration: 800,
-              },
-            ],
-            customLogic: (params, state) => ({
-              stateChanges: [
-                { variable: "wilted", operation: "set", value: true },
-                { variable: "health", operation: "subtract", value: 20 },
-              ],
-              narrativeText: `The ${state.type} droops and wilts from lack of water. Its leaves turn brown at the edges.`,
-            }),
-          },
-        },
-        {
-          id: "revive",
-          name: "Revive",
-          description: "Revive a wilted crop by watering it",
-          parameters: [],
-          logic: {
-            preconditions: [
-              { variable: "wilted", operator: "==", value: true },
-            ],
-            stateChanges: [
-              { variable: "wilted", operation: "set", value: false },
-              { variable: "watered", operation: "set", value: true },
-              { variable: "health", operation: "add", value: 10 },
-            ],
-            renderInstructions: [
-              {
-                type: "play_animation",
-                assetId: "watering-can",
-                duration: 1000,
-              },
-              {
-                type: "play_sound",
-                assetId: "water-splash",
-              },
-              {
-                type: "show_particle",
-                assetId: "water-droplets",
-                duration: 800,
-              },
-              {
-                type: "play_animation",
-                assetId: "crop-revive",
-                duration: 1500,
-              },
-            ],
-            customLogic: (params, state) => ({
-              stateChanges: [
-                { variable: "wilted", operation: "set", value: false },
-                { variable: "watered", operation: "set", value: true },
-                { variable: "health", operation: "add", value: 10 },
-              ],
-              narrativeText: `You water the wilted ${state.type}. Slowly, it perks back up as the water revitalizes it!`,
-            }),
-          },
-        },
+        { id: "water", name: "Water", description: "Water the crop" },
+        { id: "grow", name: "Grow", description: "Advance growth stage (called daily)" },
+        { id: "harvest", name: "Harvest", description: "Harvest the mature crop" },
+        { id: "fertilize", name: "Fertilize", description: "Apply fertilizer to boost growth" },
+        { id: "wilt", name: "Wilt", description: "Crop wilts from lack of water (called daily if not watered)" },
+        { id: "revive", name: "Revive", description: "Revive a wilted crop by watering it" },
       ],
       assets: {
         stateAssets: {
@@ -390,11 +108,6 @@ export const stardewValleyWorld: StoryWorldDefinition = {
           ],
         },
         actionAssets: {
-          plant: [
-            { id: "plant-seed", type: "animation", url: "/assets/farm/actions/plant.json", metadata: { duration: 800 } },
-            { id: "dig-soil", type: "sound", url: "/assets/farm/sfx/dig.mp3", metadata: { volume: 0.6 } },
-            { id: "dirt-spray", type: "particle", url: "/assets/farm/particles/dirt.json" },
-          ],
           water: [
             { id: "watering-can", type: "animation", url: "/assets/farm/actions/water.json", metadata: { duration: 1000 } },
             { id: "water-splash", type: "sound", url: "/assets/farm/sfx/water.mp3", metadata: { volume: 0.5 } },
@@ -474,123 +187,25 @@ export const stardewValleyWorld: StoryWorldDefinition = {
           name: "Enter",
           description: "Enter the facility",
           parameters: [
-            {
-              name: "currentHour",
-              type: "number",
-              description: "Current hour of day",
-              required: true,
-            },
+            { name: "currentHour", type: "number", description: "Current hour of day", required: true },
           ],
-          logic: {
-            customLogic: (params, state) => {
-              const isWithinHours = params.currentHour >= state.openHours.start && params.currentHour < state.openHours.end;
-
-              if (!isWithinHours) {
-                return {
-                  narrativeText: `The ${state.type} is closed. It opens at ${state.openHours.start}:00 and closes at ${state.openHours.end}:00.`,
-                  renderInstructions: [
-                    { type: "play_sound", assetId: "door-locked" },
-                  ],
-                };
-              }
-
-              return {
-                renderInstructions: [
-                  { type: "play_animation", assetId: "door-open", duration: 600 },
-                  { type: "play_sound", assetId: "door-chime" },
-                  { type: "play_music", assetId: `${state.type}-music` },
-                ],
-                narrativeText: `The door chimes as you enter the ${state.type}. The familiar smell of ${state.type === "shop" ? "fresh produce and seeds" : state.type === "blacksmith" ? "coal and hot metal" : "old books"} fills the air.`,
-              };
-            },
-          },
         },
         {
           id: "purchase",
           name: "Purchase",
           description: "Buy an item",
           parameters: [
-            {
-              name: "item",
-              type: "string",
-              description: "Item to purchase",
-              required: true,
-            },
-            {
-              name: "quantity",
-              type: "number",
-              description: "Quantity to buy",
-              default: 1,
-            },
+            { name: "item", type: "string", description: "Item to purchase", required: true },
+            { name: "quantity", type: "number", description: "Quantity to buy", default: 1 },
           ],
-          logic: {
-            customLogic: (params, state) => {
-              const hasItem = state.inventory.includes(params.item);
-
-              if (!hasItem) {
-                return {
-                  narrativeText: `Sorry, we don't have ${params.item} in stock right now.`,
-                  renderInstructions: [
-                    { type: "play_sound", assetId: "negative-sound" },
-                  ],
-                };
-              }
-
-              const prices: Record<string, number> = {
-                seeds: 20,
-                fertilizer: 50,
-                watering_can: 2000,
-                tools: 5000,
-              };
-
-              const totalCost = (prices[params.item] || 100) * params.quantity;
-
-              return {
-                stateChanges: [
-                  { variable: "reputation", operation: "add", value: 5 },
-                ],
-                renderInstructions: [
-                  { type: "play_animation", assetId: "cash-register", duration: 800 },
-                  { type: "play_sound", assetId: "ka-ching" },
-                  { type: "show_particle", assetId: "coin-sparkle", duration: 600 },
-                ],
-                narrativeText: `You purchase ${params.quantity}x ${params.item} for ${totalCost}g. The shopkeeper smiles and carefully wraps your items.`,
-              };
-            },
-          },
         },
         {
           id: "upgrade",
           name: "Upgrade",
           description: "Upgrade the facility",
           parameters: [
-            {
-              name: "cost",
-              type: "number",
-              description: "Cost of upgrade",
-              required: true,
-            },
+            { name: "cost", type: "number", description: "Cost of upgrade", required: true },
           ],
-          logic: {
-            preconditions: [
-              { variable: "upgradeLevel", operator: "<", value: 3 },
-            ],
-            stateChanges: [
-              { variable: "upgradeLevel", operation: "add", value: 1 },
-            ],
-            renderInstructions: [
-              { type: "play_animation", assetId: "construction", duration: 3000 },
-              { type: "play_sound", assetId: "hammer-sounds" },
-              { type: "show_particle", assetId: "construction-dust", duration: 2000 },
-              { type: "play_sound", assetId: "upgrade-complete" },
-            ],
-            customLogic: (params, state) => ({
-              stateChanges: [
-                { variable: "upgradeLevel", operation: "add", value: 1 },
-              ],
-              narrativeText: `After days of construction, the ${state.type} has been upgraded to level ${state.upgradeLevel + 1}! It now has more inventory and better services.`,
-            }),
-          },
         },
       ],
       assets: {
@@ -680,108 +295,22 @@ export const stardewValleyWorld: StoryWorldDefinition = {
         },
       ],
       actions: [
-        {
-          id: "talk",
-          name: "Talk",
-          description: "Have a conversation",
-          parameters: [],
-          logic: {
-            customLogic: (params, state) => {
-              const friendshipGain = state.talkedToday ? 0 : 5;
-              const dialogues = {
-                0: "Hello! I don't think we've met before. I'm ${name}.",
-                3: "Hey there! Nice to see you around the farm.",
-                5: "You're really getting the hang of farming! I'm impressed.",
-                7: "I consider you a good friend now. Thanks for always stopping by.",
-                10: "You're the best friend I could ask for! Let's make this valley even better together!",
-              };
-
-              const dialogueKey = Math.floor(state.friendshipLevel / 2) * 2;
-              const dialogue = dialogues[dialogueKey as keyof typeof dialogues] || dialogues[0];
-
-              return {
-                stateChanges: [
-                  { variable: "friendshipLevel", operation: "add", value: friendshipGain },
-                  { variable: "talkedToday", operation: "set", value: true },
-                ],
-                renderInstructions: [
-                  { type: "play_animation", assetId: "villager-talk", duration: 2000 },
-                  { type: "show_sprite", assetId: `${state.name}-portrait` },
-                  { type: "play_sound", assetId: "dialogue-sound" },
-                ],
-                narrativeText: `${state.name}: "${dialogue.replace('${name}', state.name)}"`,
-              };
-            },
-          },
-        },
+        { id: "talk", name: "Talk", description: "Have a conversation" },
         {
           id: "give_gift",
           name: "Give Gift",
           description: "Give an item as a gift",
           parameters: [
-            {
-              name: "item",
-              type: "string",
-              description: "Item to gift",
-              required: true,
-            },
+            { name: "item", type: "string", description: "Item to gift", required: true },
           ],
-          logic: {
-            customLogic: (params, state) => {
-              const isLoved = state.favoriteGifts.includes(params.item);
-              const friendshipGain = isLoved ? 20 : 10;
-              const reaction = isLoved
-                ? "Oh wow! This is my favorite! Thank you so much!"
-                : "Thanks! This is nice of you.";
-
-              return {
-                stateChanges: [
-                  { variable: "friendshipLevel", operation: "add", value: friendshipGain },
-                  { variable: "mood", operation: "set", value: isLoved ? "very_happy" : "happy" },
-                ],
-                renderInstructions: [
-                  { type: "play_animation", assetId: "give-gift", duration: 1500 },
-                  { type: "show_sprite", assetId: `${state.name}-${isLoved ? 'excited' : 'happy'}` },
-                  { type: "play_sound", assetId: isLoved ? "love-sound" : "gift-sound" },
-                  ...(isLoved ? [{
-                    type: "show_particle" as const,
-                    assetId: "love-hearts",
-                    duration: 2000,
-                  }] : []),
-                ],
-                narrativeText: `You give ${params.item} to ${state.name}. ${state.name}: "${reaction}" ${isLoved ? '(+2 hearts)' : '(+1 heart)'}`,
-              };
-            },
-          },
         },
         {
           id: "invite",
           name: "Invite",
           description: "Invite to an event",
           parameters: [
-            {
-              name: "event",
-              type: "string",
-              description: "Event name",
-              required: true,
-            },
+            { name: "event", type: "string", description: "Event name", required: true },
           ],
-          logic: {
-            preconditions: [
-              { variable: "friendshipLevel", operator: ">=", value: 4 },
-            ],
-            customLogic: (params, state) => ({
-              stateChanges: [
-                { variable: "mood", operation: "set", value: "excited" },
-              ],
-              renderInstructions: [
-                { type: "play_animation", assetId: "villager-excited", duration: 1000 },
-                { type: "play_sound", assetId: "acceptance-sound" },
-                { type: "show_particle", assetId: "excitement-sparkle", duration: 1500 },
-              ],
-              narrativeText: `${state.name}: "I'd love to go to the ${params.event} with you! Thanks for inviting me!"`,
-            }),
-          },
         },
       ],
       assets: {
@@ -883,146 +412,11 @@ export const stardewValleyWorld: StoryWorldDefinition = {
         },
       ],
       actions: [
-        {
-          id: "feed",
-          name: "Feed",
-          description: "Feed the animal",
-          parameters: [],
-          logic: {
-            preconditions: [
-              { variable: "fed", operator: "==", value: false },
-            ],
-            stateChanges: [
-              { variable: "fed", operation: "set", value: true },
-              { variable: "happiness", operation: "add", value: 10 },
-              { variable: "health", operation: "add", value: 5 },
-            ],
-            renderInstructions: [
-              { type: "play_animation", assetId: "animal-eat", duration: 2000 },
-              { type: "play_sound", assetId: "eating-sound" },
-              { type: "show_particle", assetId: "feed-sparkle", duration: 800 },
-            ],
-            customLogic: (params, state) => ({
-              stateChanges: [
-                { variable: "fed", operation: "set", value: true },
-                { variable: "happiness", operation: "add", value: 10 },
-                { variable: "health", operation: "add", value: 5 },
-              ],
-              narrativeText: `You place fresh ${state.type === "chicken" ? "wheat" : "hay"} in ${state.name}'s feeding trough. ${state.name} happily munches away!`,
-            }),
-          },
-        },
-        {
-          id: "pet",
-          name: "Pet",
-          description: "Pet the animal",
-          parameters: [],
-          logic: {
-            preconditions: [
-              { variable: "petted", operator: "==", value: false },
-            ],
-            stateChanges: [
-              { variable: "petted", operation: "set", value: true },
-              { variable: "happiness", operation: "add", value: 15 },
-            ],
-            renderInstructions: [
-              { type: "play_animation", assetId: "animal-happy", duration: 1500 },
-              { type: "play_sound", assetId: "animal-content-sound" },
-              { type: "show_particle", assetId: "love-hearts", duration: 1200 },
-            ],
-            customLogic: (params, state) => {
-              const sounds = {
-                chicken: "Bawk bawk!",
-                cow: "Mooooo~",
-                goat: "Baaaaa!",
-                sheep: "Baaaaah~",
-              };
-              const sound = sounds[state.type as keyof typeof sounds] || "Happy sounds!";
-
-              return {
-                stateChanges: [
-                  { variable: "petted", operation: "set", value: true },
-                  { variable: "happiness", operation: "add", value: 15 },
-                ],
-                narrativeText: `You gently pet ${state.name}. ${state.name} nuzzles against your hand contentedly. "${sound}"`,
-              };
-            },
-          },
-        },
-        {
-          id: "collect_produce",
-          name: "Collect Produce",
-          description: "Collect eggs, milk, wool, etc.",
-          parameters: [],
-          logic: {
-            preconditions: [
-              { variable: "produceReady", operator: "==", value: true },
-            ],
-            customLogic: (params, state) => {
-              const produceTypes = {
-                chicken: "egg",
-                cow: "milk",
-                goat: "goat milk",
-                sheep: "wool",
-              };
-              const produce = produceTypes[state.type as keyof typeof produceTypes] || "produce";
-              const qualityLabel = state.produceQuality === "gold" ? "⭐ gold star" : state.produceQuality === "silver" ? "silver star" : "regular";
-
-              return {
-                stateChanges: [
-                  { variable: "produceReady", operation: "set", value: false },
-                  { variable: "produceQuality", operation: "set", value: "regular" },
-                ],
-                renderInstructions: [
-                  { type: "play_animation", assetId: "collect-produce", duration: 1000 },
-                  { type: "play_sound", assetId: "collect-sound" },
-                  { type: "show_particle", assetId: "collect-sparkle", duration: 800 },
-                ],
-                narrativeText: `You collect a ${qualityLabel} ${produce} from ${state.name}! ${state.happiness > 80 ? "The high quality shows how happy and healthy they are!" : ""}`,
-              };
-            },
-          },
-        },
-        {
-          id: "produce",
-          name: "Produce",
-          description: "Generate produce (called daily)",
-          parameters: [],
-          logic: {
-            customLogic: (params, state) => {
-              // High happiness = better quality produce
-              const quality = state.happiness > 90 ? "gold" : state.happiness > 70 ? "silver" : "regular";
-
-              return {
-                stateChanges: [
-                  { variable: "produceReady", operation: "set", value: true },
-                  { variable: "produceQuality", operation: "set", value: quality },
-                  { variable: "fed", operation: "set", value: false },
-                  { variable: "petted", operation: "set", value: false },
-                  { variable: "age", operation: "add", value: 1 },
-                ],
-                renderInstructions: [
-                  { type: "show_particle", assetId: "produce-ready", duration: 500 },
-                ],
-                narrativeText: `${state.name} has produced fresh ${quality} quality goods overnight!`,
-              };
-            },
-          },
-        },
-        {
-          id: "move_to_barn",
-          name: "Move to Barn",
-          description: "Move the animal to the barn",
-          parameters: [],
-          logic: {
-            renderInstructions: [
-              { type: "play_animation", assetId: "animal-walk", duration: 1500 },
-              { type: "play_sound", assetId: "footsteps" },
-            ],
-            narrativeText: (params, state) =>
-              `${state.name} slowly walks back to the warm barn for the night.`,
-          },
-        },
+        { id: "feed", name: "Feed", description: "Feed the animal" },
+        { id: "pet", name: "Pet", description: "Pet the animal" },
+        { id: "collect_produce", name: "Collect Produce", description: "Collect eggs, milk, wool, etc." },
+        { id: "produce", name: "Produce", description: "Generate produce (called daily)" },
+        { id: "move_to_barn", name: "Move to Barn", description: "Move the animal to the barn" },
       ],
       assets: {
         stateAssets: {
@@ -1062,73 +456,6 @@ export const stardewValleyWorld: StoryWorldDefinition = {
     },
   ],
 
-  // ========================================
-  // NARRATIVE RENDERER (Sentence-by-Sentence)
-  // ========================================
-  narrativeRenderer: {
-    action: {
-      id: "render_narrative",
-      name: "Render Narrative",
-      description: "Display narrative text sentence by sentence with click-to-advance",
-      parameters: [
-        {
-          name: "text",
-          type: "string",
-          description: "Narrative text to display",
-          required: true,
-        },
-      ],
-      logic: {
-        customLogic: (params) => {
-          // Split text into sentences
-          const sentences = params.text
-            .split(/(?<=[.!?])\s+/)
-            .filter((s: string) => s.trim().length > 0);
-
-          // Create render instructions for each sentence
-          const renderInstructions = sentences.map((sentence: string, index: number) => ({
-            type: "display_text" as const,
-            text: sentence,
-            style: {
-              fontSize: 20,
-              fontFamily: '"Stardew Valley", "Press Start 2P", monospace',
-              color: "#331a00",
-              backgroundColor: "#fffef7",
-              padding: "20px",
-              border: "4px solid #8b6f47",
-              borderRadius: "8px",
-              animation: "typewriter",
-              speed: 40,
-              waitForClick: true, // Wait for user click before advancing
-              sentenceIndex: index,
-              totalSentences: sentences.length,
-            },
-          }));
-
-          return {
-            renderInstructions,
-            narrativeText: params.text,
-          };
-        },
-      },
-    },
-    defaultStyle: {
-      fontSize: 20,
-      fontFamily: '"Stardew Valley", "Press Start 2P", monospace',
-      color: "#331a00",
-      backgroundColor: "#fffef7",
-      animation: "typewriter",
-      speed: 40,
-    },
-    template: (text) => {
-      // Add flavor based on time/weather if available
-      return text;
-    },
-  },
-
-  // ========================================
-  // GLOBAL ASSETS & STATE
-  // ========================================
   globalAssets: {
     defaultAssets: [
       {
@@ -1154,44 +481,12 @@ export const stardewValleyWorld: StoryWorldDefinition = {
 
   globalState: {
     variables: [
-      {
-        name: "season",
-        type: "string",
-        description: "Current season",
-        default: "spring",
-      },
-      {
-        name: "day",
-        type: "number",
-        description: "Day of the season (1-28)",
-        default: 1,
-        validation: { min: 1, max: 28 },
-      },
-      {
-        name: "hour",
-        type: "number",
-        description: "Hour of the day (6-26, where 26 is 2am)",
-        default: 6,
-        validation: { min: 6, max: 26 },
-      },
-      {
-        name: "weather",
-        type: "string",
-        description: "Current weather",
-        default: "sunny",
-      },
-      {
-        name: "farmLevel",
-        type: "number",
-        description: "Overall farm level",
-        default: 1,
-      },
-      {
-        name: "gold",
-        type: "number",
-        description: "Player's gold",
-        default: 500,
-      },
+      { name: "season", type: "string", description: "Current season", default: "spring" },
+      { name: "day", type: "number", description: "Day of the season (1-28)", default: 1, validation: { min: 1, max: 28 } },
+      { name: "hour", type: "number", description: "Hour of the day (6-26)", default: 6, validation: { min: 6, max: 26 } },
+      { name: "weather", type: "string", description: "Current weather", default: "sunny" },
+      { name: "farmLevel", type: "number", description: "Overall farm level", default: 1 },
+      { name: "gold", type: "number", description: "Player's gold", default: 500 },
     ],
     initialState: {
       season: "spring",

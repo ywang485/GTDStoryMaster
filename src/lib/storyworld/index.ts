@@ -2,12 +2,17 @@
  * StoryWorld System
  *
  * Interactive storyworld state machines for visual/audio presentation.
- * Complements the tool system by handling rendering and user interaction.
+ * Definitions are schema-only; logic lives in executor subclasses.
  */
 
-export { StoryWorldExecutor, createStoryWorldExecutor } from "./storyworld-executor";
-export { fantasyWorld } from "./examples/fantasy-world";
+export { BaseStoryWorldExecutor } from "./base-storyworld-executor";
+export { StardewValleyExecutor } from "./examples/stardew-valley-executor";
+export { FantasyWorldExecutor } from "./examples/fantasy-executor";
+
 export { stardewValleyWorld } from "./examples/stardew-valley-world";
+export { fantasyWorld } from "./examples/fantasy-world";
+
+export type { StoryWorldRendererInterface } from "./renderer-interface";
 
 export type {
   // Core types
@@ -21,19 +26,10 @@ export type {
   ObjectAction,
   StateVariable,
   ActionParameter,
-
-  // Action logic
-  ActionLogic,
-  StateChange,
   ActionResult,
 
-  // Rendering
+  // Assets
   Asset,
   AssetType,
   AssetLibrary,
-  RenderInstruction,
-  NarrativeRenderer,
-
-  // Tool binding (for future use)
-  ToolStoryWorldBinding,
 } from "@/types/storyworld-definition";

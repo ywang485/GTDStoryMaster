@@ -1,17 +1,15 @@
 /**
  * Storyworld Definition System
  *
- * Defines interactive storyworlds as object-oriented state machines focused on
- * presentation and user interaction. Storyworlds handle rendering, assets, and
- * visual feedback, while tools handle data processing and logic.
+ * Defines interactive storyworlds as object-oriented state machines.
+ * Definitions are schema-only — action logic lives in executor subclasses,
+ * mirroring the tool system's ToolDefinition / BaseToolExecutor pattern.
  *
  * Architecture:
  * - Object Types: Classes of interactive objects (Character, Item, Location, etc.)
  * - State Variables: Track object state (position, health, inventory, etc.)
- * - Actions: Parameterized operations that modify state
- * - Action Logic: State transition rules
- * - Assets: Visual/audio resources tied to states and transitions
- * - Narrative Rendering: Built-in text output capability
+ * - Actions: Metadata-only declarations (logic implemented in executor handlers)
+ * - Assets: Visual/audio resources tied to states and actions
  */
 
 /**
@@ -34,6 +32,10 @@ export interface Asset {
   id: string;
   type: AssetType;
   url: string;
+  tileIndex?: number;
+  tileSize?: number;
+  tilesPerRow?: number;
+  scale?: number;
   metadata?: {
     duration?: number;        // For animations, sounds, videos
     loop?: boolean;           // For animations, music
@@ -97,87 +99,13 @@ export interface StateVariable {
 }
 
 /**
- * Rendering instruction for visual output
- */
-export interface RenderInstruction {
-  type: "play_animation" | "show_sprite" | "play_sound" | "play_music" |
-        "show_particle" | "apply_shader" | "display_text" | "play_video";
-  assetId?: string;
-  duration?: number;
-  position?: { x: number; y: number; z?: number };
-  scale?: number;
-  rotation?: number;
-  opacity?: number;
-  transition?: {
-    type: "fade" | "slide" | "zoom" | "dissolve";
-    duration: number;
-  };
-  text?: string;  // For display_text
-  style?: any;    // For text styling
-}
-
-/**
- * State change specification
- */
-export interface StateChange {
-  objectId?: string;  // If omitted, applies to current object
-  objectType?: string;
-  variable: string;
-  operation: "set" | "add" | "subtract" | "multiply" | "divide" | "append" | "remove";
-  value: any;
-  condition?: string;  // Optional condition for the change
-}
-
-/**
- * Action logic - defines what happens when action is executed
- */
-export interface ActionLogic {
-  // State changes to apply
-  stateChanges?: StateChange[];
-
-  // Rendering instructions
-  renderInstructions?: RenderInstruction[];
-
-  // Narrative text to output
-  narrativeText?: string | ((params: any, state: any) => string);
-
-  // Conditions for execution
-  preconditions?: Array<{
-    variable: string;
-    operator: "==" | "!=" | ">" | "<" | ">=" | "<=" | "in" | "not_in";
-    value: any;
-  }>;
-
-  // Side effects (actions triggered on other objects)
-  sideEffects?: Array<{
-    objectId?: string;
-    objectType?: string;
-    action: string;
-    params?: Record<string, any>;
-  }>;
-
-  // Custom logic function
-  customLogic?: (params: any, objectState: any, worldState: any) => {
-    stateChanges?: StateChange[];
-    renderInstructions?: RenderInstruction[];
-    narrativeText?: string;
-  };
-}
-
-/**
- * Action definition for object types
+ * Action definition for object types (metadata only — logic in executor)
  */
 export interface ObjectAction {
   id: string;
   name: string;
   description: string;
   parameters?: ActionParameter[];
-  logic: ActionLogic;
-
-  // Visual/audio feedback
-  onStart?: RenderInstruction[];
-  onComplete?: RenderInstruction[];
-  onError?: RenderInstruction[];
 }
 
 /**
@@ -191,7 +119,7 @@ export interface ObjectType {
   // State definition
   stateVariables: StateVariable[];
 
-  // Available actions
+  // Available actions (metadata only)
   actions: ObjectAction[];
 
   // Asset library for this object type
@@ -210,27 +138,7 @@ export interface ObjectType {
 }
 
 /**
- * Root-level narrative rendering action
- */
-export interface NarrativeRenderer {
-  action: ObjectAction;  // The renderNarrative action
-
-  // Default rendering configuration
-  defaultStyle?: {
-    fontSize?: number;
-    fontFamily?: string;
-    color?: string;
-    backgroundColor?: string;
-    animation?: "typewriter" | "fade" | "slide" | "none";
-    speed?: number;
-  };
-
-  // Template for narrative formatting
-  template?: string | ((text: string, context: any) => string);
-}
-
-/**
- * Complete storyworld definition
+ * Complete storyworld definition (schema only — no logic)
  */
 export interface StoryWorldDefinition {
   id: string;
@@ -240,9 +148,6 @@ export interface StoryWorldDefinition {
 
   // Object types in this storyworld
   objectTypes: ObjectType[];
-
-  // Root-level narrative rendering
-  narrativeRenderer: NarrativeRenderer;
 
   // Global assets (backgrounds, ambient sounds, etc.)
   globalAssets?: AssetLibrary;
@@ -293,14 +198,6 @@ export interface StoryWorldState {
   // Global state
   globalState: Record<string, any>;
 
-  // Active renderings
-  activeRenders: Array<{
-    id: string;
-    instruction: RenderInstruction;
-    startTime: number;
-    endTime?: number;
-  }>;
-
   // Narrative history
   narrativeHistory: Array<{
     timestamp: number;
@@ -319,61 +216,8 @@ export interface StoryWorldState {
  */
 export interface ActionResult {
   success: boolean;
-
-  // State changes that were applied
-  stateChanges?: StateChange[];
-
-  // Rendering instructions to execute
-  renderInstructions?: RenderInstruction[];
-
-  // Narrative text generated
   narrativeText?: string;
-
-  // Error if action failed
-  error?: {
-    code: string;
-    message: string;
-    details?: any;
-  };
-
-  // Side effects triggered
-  sideEffects?: Array<{
-    objectId: string;
-    action: string;
-    result: ActionResult;
-  }>;
-}
-
-/**
- * Tool-to-Storyworld mapping configuration
- * (For future use when binding tools to storyworlds)
- */
-export interface ToolStoryWorldBinding {
-  toolId: string;
-  storyWorldId: string;
-
-  // Map tool actions to storyworld actions
-  actionMappings: Array<{
-    toolAction: string;
-    storyWorldObjectType: string;
-    storyWorldAction: string;
-    parameterMapping?: Record<string, string>;  // toolParam -> storyWorldParam
-  }>;
-
-  // Map tool states to storyworld states
-  stateMappings: Array<{
-    toolState: string;
-    storyWorldObjectId: string;
-    storyWorldStateVariable: string;
-    transformation?: (toolValue: any) => any;
-  }>;
-
-  // Visual rendering preferences
-  renderingPreferences?: {
-    showToolActions: boolean;
-    animateStateChanges: boolean;
-    playAudioFeedback: boolean;
-  };
+  error?: string;
 }
 
 /**
