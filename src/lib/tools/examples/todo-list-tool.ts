@@ -60,7 +60,7 @@ const TaskDetailsSchema = z.object({
   tags: TaskTagsSchema.optional(),
   estimatedMinutes: z.number().min(0).optional(),
   dependencies: z.array(z.string()).optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 const ListConfigSchema = z.object({
@@ -136,7 +136,7 @@ const todoTaskStateVariables = [
   publicState('createdAt', z.date(), new Date(), 'Task creation timestamp'),
   publicState('startedAt', z.date().nullable(), null, 'When task was started'),
   publicState('completedAt', z.date().nullable(), null, 'When task was completed'),
-  privateState('metadata', z.record(z.unknown()), {}, 'Additional metadata'),
+  privateState('metadata', z.record(z.string(), z.unknown()), {}, 'Additional metadata'),
 ];
 
 // ============================================================================

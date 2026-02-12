@@ -56,7 +56,7 @@ const SessionStatusSchema = z.enum(['active', 'paused', 'completed', 'cancelled'
 
 const ToolInputSchema = z.object({
   initialSettings: TimerSettingsSchema.optional(),
-  taskContext: z.record(z.unknown()).optional()
+  taskContext: z.record(z.string(), z.unknown()).optional()
 });
 
 const ToolOutputSchema = z.object({
