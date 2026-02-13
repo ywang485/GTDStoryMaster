@@ -15,6 +15,7 @@ import type {
   ObjectType,
   ActionResult,
   StoryWorldPublicState,
+  AssetLibrary,
 } from "@/types/storyworld-definition";
 import type { StoryWorldRendererInterface } from "./renderer-interface";
 
@@ -23,6 +24,12 @@ export abstract class BaseStoryWorldExecutor {
   protected state: StoryWorldState;
   protected objectTypesMap: Map<string, ObjectType>;
   protected _renderer: StoryWorldRendererInterface | null = null;
+
+  /** Asset library per object type (key: objectType id) */
+  protected objectAssets: Record<string, AssetLibrary> = {};
+
+  /** Global assets (backgrounds, ambient sounds, etc.) */
+  protected globalAssets: AssetLibrary = {};
 
   constructor(definition: StoryWorldDefinition, existingState?: StoryWorldState) {
     this.definition = definition;
@@ -191,6 +198,14 @@ export abstract class BaseStoryWorldExecutor {
   updateGlobalState(variable: string, value: any): void {
     this.state.globalState[variable] = value;
     this.state.lastModified = Date.now();
+  }
+
+  getObjectAssets(): Record<string, AssetLibrary> {
+    return this.objectAssets;
+  }
+
+  getGlobalAssets(): AssetLibrary {
+    return this.globalAssets;
   }
 
   getPublicState(): StoryWorldPublicState {

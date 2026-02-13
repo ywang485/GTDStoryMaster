@@ -86,48 +86,6 @@ export const stardewValleyWorld: StoryWorldDefinition = {
         { id: "wilt", name: "Wilt", description: "Crop wilts from lack of water (called daily if not watered)" },
         { id: "revive", name: "Revive", description: "Revive a wilted crop by watering it" },
       ],
-      assets: {
-        stateAssets: {
-          stage0: [
-            { id: "seeds", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 8, tileSize: 16, tilesPerRow: 6, scale: 2.0 },
-          ],
-          stage1: [
-            { id: "sprout", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 9, tileSize: 16, tilesPerRow: 6, scale: 2.0 },
-          ],
-          stage2: [
-            { id: "growing", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 10, tileSize: 16, tilesPerRow: 6, scale: 2.0 },
-          ],
-          stage3: [
-            { id: "maturing", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 11, tileSize: 16, tilesPerRow: 6, scale: 2.0 },
-          ],
-          stage4: [
-            { id: "mature", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 12, tileSize: 16, tilesPerRow: 16, scale: 2.0 },
-          ],
-          wilted: [
-            { id: "wilted", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 13, tileSize: 16, tilesPerRow: 6, scale: 4.0 },
-          ],
-        },
-        actionAssets: {
-          water: [
-            { id: "watering-can", type: "animation", url: "/assets/farm/actions/water.json", metadata: { duration: 1000 } },
-            { id: "water-splash", type: "sound", url: "/assets/farm/sfx/water.mp3", metadata: { volume: 0.5 } },
-            { id: "water-droplets", type: "particle", url: "/assets/farm/particles/water.json" },
-          ],
-          harvest: [
-            { id: "harvest-crop", type: "animation", url: "/assets/farm/actions/harvest.json", metadata: { duration: 1200 } },
-            { id: "harvest-sound", type: "sound", url: "/assets/farm/sfx/harvest.mp3", metadata: { volume: 0.7 } },
-            { id: "collect-sparkle", type: "particle", url: "/assets/farm/particles/collect.json" },
-          ],
-          wilt: [
-            { id: "crop-wilt", type: "animation", url: "/assets/farm/actions/wilt.json", metadata: { duration: 1000 } },
-            { id: "wilt-sound", type: "sound", url: "/assets/farm/sfx/wilt.mp3", metadata: { volume: 0.4 } },
-            { id: "dry-dust", type: "particle", url: "/assets/farm/particles/dry.json" },
-          ],
-          revive: [
-            { id: "crop-revive", type: "animation", url: "/assets/farm/actions/revive.json", metadata: { duration: 1500 } },
-          ],
-        },
-      },
       renderConfig: {
         layer: 1,
         priority: 50,
@@ -208,26 +166,6 @@ export const stardewValleyWorld: StoryWorldDefinition = {
           ],
         },
       ],
-      assets: {
-        stateAssets: {
-          open: [
-            { id: "facility-open", type: "sprite", url: "/assets/farm/facilities/shop-open.png" },
-          ],
-          closed: [
-            { id: "facility-closed", type: "sprite", url: "/assets/farm/facilities/shop-closed.png" },
-          ],
-        },
-        actionAssets: {
-          enter: [
-            { id: "door-open", type: "animation", url: "/assets/farm/facilities/door-open.json" },
-            { id: "door-chime", type: "sound", url: "/assets/farm/sfx/door-chime.mp3", metadata: { volume: 0.6 } },
-          ],
-          purchase: [
-            { id: "cash-register", type: "animation", url: "/assets/farm/facilities/register.json" },
-            { id: "ka-ching", type: "sound", url: "/assets/farm/sfx/cash-register.mp3", metadata: { volume: 0.7 } },
-          ],
-        },
-      },
       renderConfig: {
         layer: 2,
         priority: 60,
@@ -313,31 +251,6 @@ export const stardewValleyWorld: StoryWorldDefinition = {
           ],
         },
       ],
-      assets: {
-        stateAssets: {
-          happy: [
-            { id: "villager-happy", type: "sprite", url: "/assets/farm/villagers/happy.png" },
-          ],
-          neutral: [
-            { id: "villager-neutral", type: "sprite", url: "/assets/farm/villagers/neutral.png" },
-          ],
-          sad: [
-            { id: "villager-sad", type: "sprite", url: "/assets/farm/villagers/sad.png" },
-          ],
-        },
-        actionAssets: {
-          talk: [
-            { id: "villager-talk", type: "animation", url: "/assets/farm/villagers/talk.json" },
-            { id: "dialogue-sound", type: "sound", url: "/assets/farm/sfx/dialogue.mp3", metadata: { volume: 0.5 } },
-          ],
-          give_gift: [
-            { id: "give-gift", type: "animation", url: "/assets/farm/villagers/gift.json" },
-            { id: "gift-sound", type: "sound", url: "/assets/farm/sfx/gift.mp3", metadata: { volume: 0.6 } },
-            { id: "love-sound", type: "sound", url: "/assets/farm/sfx/love.mp3", metadata: { volume: 0.7 } },
-            { id: "love-hearts", type: "particle", url: "/assets/farm/particles/hearts.json" },
-          ],
-        },
-      },
       renderConfig: {
         layer: 3,
         priority: 70,
@@ -418,35 +331,6 @@ export const stardewValleyWorld: StoryWorldDefinition = {
         { id: "produce", name: "Produce", description: "Generate produce (called daily)" },
         { id: "move_to_barn", name: "Move to Barn", description: "Move the animal to the barn" },
       ],
-      assets: {
-        stateAssets: {
-          happy: [
-            { id: "animal-happy-sprite", type: "sprite", url: "/assets/farm/animals/happy.png" },
-          ],
-          neutral: [
-            { id: "animal-neutral-sprite", type: "sprite", url: "/assets/farm/animals/neutral.png" },
-          ],
-          sick: [
-            { id: "animal-sick-sprite", type: "sprite", url: "/assets/farm/animals/sick.png" },
-          ],
-        },
-        actionAssets: {
-          feed: [
-            { id: "animal-eat", type: "animation", url: "/assets/farm/animals/eat.json" },
-            { id: "eating-sound", type: "sound", url: "/assets/farm/sfx/eating.mp3", metadata: { volume: 0.5 } },
-          ],
-          pet: [
-            { id: "animal-happy", type: "animation", url: "/assets/farm/animals/happy.json" },
-            { id: "animal-content-sound", type: "sound", url: "/assets/farm/sfx/content.mp3", metadata: { volume: 0.6 } },
-            { id: "love-hearts", type: "particle", url: "/assets/farm/particles/hearts.json" },
-          ],
-          collect_produce: [
-            { id: "collect-produce", type: "animation", url: "/assets/farm/animals/collect.json" },
-            { id: "collect-sound", type: "sound", url: "/assets/farm/sfx/collect.mp3", metadata: { volume: 0.7 } },
-            { id: "collect-sparkle", type: "particle", url: "/assets/farm/particles/sparkle.json" },
-          ],
-        },
-      },
       renderConfig: {
         layer: 2,
         priority: 65,
@@ -455,29 +339,6 @@ export const stardewValleyWorld: StoryWorldDefinition = {
       },
     },
   ],
-
-  globalAssets: {
-    defaultAssets: [
-      {
-        id: "farm-bgm",
-        type: "music",
-        url: "/assets/farm/music/peaceful-valley.mp3",
-        metadata: { loop: true, volume: 0.3 },
-      },
-      {
-        id: "birds-chirping",
-        type: "sound",
-        url: "/assets/farm/ambient/birds.mp3",
-        metadata: { loop: true, volume: 0.2 },
-      },
-      {
-        id: "wind-rustling",
-        type: "sound",
-        url: "/assets/farm/ambient/wind.mp3",
-        metadata: { loop: true, volume: 0.15 },
-      },
-    ],
-  },
 
   globalState: {
     variables: [

@@ -9,7 +9,6 @@
  * - Object Types: Classes of interactive objects (Character, Item, Location, etc.)
  * - State Variables: Track object state (position, health, inventory, etc.)
  * - Actions: Metadata-only declarations (logic implemented in executor handlers)
- * - Assets: Visual/audio resources tied to states and actions
  */
 
 /**
@@ -122,9 +121,6 @@ export interface ObjectType {
   // Available actions (metadata only)
   actions: ObjectAction[];
 
-  // Asset library for this object type
-  assets: AssetLibrary;
-
   // Initial state
   initialState?: Record<string, any>;
 
@@ -148,9 +144,6 @@ export interface StoryWorldDefinition {
 
   // Object types in this storyworld
   objectTypes: ObjectType[];
-
-  // Global assets (backgrounds, ambient sounds, etc.)
-  globalAssets?: AssetLibrary;
 
   // Global state (weather, time, etc.)
   globalState?: {

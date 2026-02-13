@@ -10,9 +10,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
-import type {
-  StoryWorldDefinition,
-} from "@/types/storyworld-definition";
 import type { StoryWorldRendererInterface } from "@/lib/storyworld/renderer-interface";
 import { SoundEngine } from "./sound-engine";
 import { ParticleSystem } from "./particle-system";
@@ -21,7 +18,6 @@ import type { BaseStoryWorldExecutor } from "@/lib/storyworld/base-storyworld-ex
 
 interface StoryWorldRendererProps {
   executor: BaseStoryWorldExecutor;
-  world: StoryWorldDefinition;
   width?: number;
   height?: number;
   onNarrativeClick?: () => void;
@@ -31,7 +27,6 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
   function StoryWorldRenderer(
     {
       executor,
-      world,
       width = 800,
       height = 600,
       onNarrativeClick,
@@ -140,12 +135,13 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
         backgroundImageRef.current = bgImage;
       };
 
-      // Load sprite images from storyworld definition
+      // Load sprite images from executor assets
       const loadedTilesets = new Set<string>();
+      const allObjectAssets = executor.getObjectAssets();
 
-      world.objectTypes.forEach((objectType) => {
-        if (objectType.assets?.stateAssets) {
-          Object.entries(objectType.assets.stateAssets).forEach(([, assets]) => {
+      Object.values(allObjectAssets).forEach((assetLibrary) => {
+        if (assetLibrary.stateAssets) {
+          Object.entries(assetLibrary.stateAssets).forEach(([, assets]) => {
             assets.forEach((asset) => {
               if (asset.type === "sprite" && asset.url) {
                 spriteMetadata.current.set(asset.id, {
@@ -192,12 +188,12 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
         particleSystemRef.current?.cleanup();
         spriteRendererRef.current?.cleanup();
       };
-    }, [world]);
+    }, [executor]);
 
     // Get the sprite ID for an object based on its current state
     const getSpriteForObject = useCallback((obj: any): string | null => {
-      const objectType = world.objectTypes.find((ot) => ot.id === obj.typeId);
-      if (!objectType?.assets?.stateAssets) return null;
+      const assetLibrary = executor.getObjectAssets()[obj.typeId];
+      if (!assetLibrary?.stateAssets) return null;
 
       let stateKey: string | null = null;
 
@@ -214,11 +210,11 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
         else stateKey = "neutral";
       }
 
-      if (!stateKey || !objectType.assets.stateAssets[stateKey]) return null;
+      if (!stateKey || !assetLibrary.stateAssets[stateKey]) return null;
 
-      const assets = objectType.assets.stateAssets[stateKey];
+      const assets = assetLibrary.stateAssets[stateKey];
       return assets[0]?.id || null;
-    }, [world]);
+    }, [executor]);
 
     // Render the scene
     const renderScene = useCallback(() => {

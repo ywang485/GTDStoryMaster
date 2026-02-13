@@ -11,6 +11,54 @@ import { fantasyWorld } from "./fantasy-world";
 export class FantasyWorldExecutor extends BaseStoryWorldExecutor {
   constructor() {
     super(fantasyWorld);
+
+    this.objectAssets = {
+      hero: {
+        stateAssets: {
+          idle: [
+            { id: "hero-idle-sprite", type: "sprite", url: "/assets/fantasy/hero/idle.png", metadata: { dimensions: { width: 64, height: 64 } } },
+            { id: "hero-idle-anim", type: "animation", url: "/assets/fantasy/hero/idle-anim.json", metadata: { duration: 2000, loop: true } },
+          ],
+          damaged: [
+            { id: "hero-hurt-sprite", type: "sprite", url: "/assets/fantasy/hero/hurt.png", metadata: { dimensions: { width: 64, height: 64 } } },
+          ],
+        },
+        actionAssets: {
+          attack: [
+            { id: "hero-attack", type: "animation", url: "/assets/fantasy/hero/attack.json", metadata: { duration: 600 } },
+            { id: "sword-slash", type: "sound", url: "/assets/fantasy/sfx/sword-slash.mp3", metadata: { volume: 0.7 } },
+            { id: "hit-spark", type: "particle", url: "/assets/fantasy/particles/hit-spark.json", metadata: { duration: 300 } },
+          ],
+          move: [
+            { id: "hero-walk", type: "animation", url: "/assets/fantasy/hero/walk.json", metadata: { duration: 500, loop: true } },
+            { id: "footsteps", type: "sound", url: "/assets/fantasy/sfx/footsteps.mp3", metadata: { volume: 0.5, loop: true } },
+          ],
+        },
+      },
+      monster: {
+        stateAssets: {
+          idle: [
+            { id: "monster-idle", type: "sprite", url: "/assets/fantasy/monster/idle.png", metadata: { dimensions: { width: 64, height: 64 } } },
+          ],
+        },
+        actionAssets: {
+          take_damage: [
+            { id: "monster-hurt", type: "animation", url: "/assets/fantasy/monster/hurt.json", metadata: { duration: 400 } },
+            { id: "monster-pain", type: "sound", url: "/assets/fantasy/sfx/monster-pain.mp3", metadata: { volume: 0.6 } },
+            { id: "blood-splatter", type: "particle", url: "/assets/fantasy/particles/blood.json", metadata: { duration: 500 } },
+            { id: "monster-death", type: "animation", url: "/assets/fantasy/monster/death.json", metadata: { duration: 1000 } },
+            { id: "monster-death-sound", type: "sound", url: "/assets/fantasy/sfx/monster-death.mp3", metadata: { volume: 0.7 } },
+          ],
+        },
+      },
+    };
+
+    this.globalAssets = {
+      defaultAssets: [
+        { id: "background-music", type: "music", url: "/assets/fantasy/music/adventure-theme.mp3", metadata: { loop: true, volume: 0.3 } },
+        { id: "ambient-forest", type: "sound", url: "/assets/fantasy/ambient/forest.mp3", metadata: { loop: true, volume: 0.2 } },
+      ],
+    };
   }
 
   protected async handleMove(

@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { StardewValleyExecutor, stardewValleyWorld } from "@/lib/storyworld";
+import { StardewValleyExecutor } from "@/lib/storyworld";
 import type { StoryWorldRendererInterface } from "@/lib/storyworld";
 import { StoryWorldRenderer } from "@/components/storyworld";
 
@@ -94,7 +94,6 @@ export default function StoryWorldDemoPage() {
               <StoryWorldRenderer
                 ref={rendererRef}
                 executor={executor}
-                world={stardewValleyWorld}
                 width={800}
                 height={600}
               />
