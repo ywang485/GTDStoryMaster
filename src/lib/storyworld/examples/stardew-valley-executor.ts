@@ -18,22 +18,22 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
       crop: {
         stateAssets: {
           stage0: [
-            { id: "seeds", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 8, tileSize: 16, tilesPerRow: 6, scale: 2.0 },
+            { id: "seeds", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 8, tileSize: 16, tilesPerRow: 6, scale: 3.0 },
           ],
           stage1: [
-            { id: "sprout", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 9, tileSize: 16, tilesPerRow: 6, scale: 2.0 },
+            { id: "sprout", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 9, tileSize: 16, tilesPerRow: 6, scale: 3.0 },
           ],
           stage2: [
-            { id: "growing", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 10, tileSize: 16, tilesPerRow: 6, scale: 2.0 },
+            { id: "growing", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 10, tileSize: 16, tilesPerRow: 6, scale: 3.0 },
           ],
           stage3: [
-            { id: "maturing", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 11, tileSize: 16, tilesPerRow: 6, scale: 2.0 },
+            { id: "maturing", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 11, tileSize: 16, tilesPerRow: 6, scale: 3.0 },
           ],
           stage4: [
-            { id: "mature", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 12, tileSize: 16, tilesPerRow: 16, scale: 2.0 },
+            { id: "mature", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 12, tileSize: 16, tilesPerRow: 16, scale: 3.0 },
           ],
           wilted: [
-            { id: "wilted", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 13, tileSize: 16, tilesPerRow: 6, scale: 4.0 },
+            { id: "wilted", type: "sprite", url: "/assets/farm/crops/crops.png", tileIndex: 13, tileSize: 16, tilesPerRow: 6, scale: 3.0 },
           ],
         },
         actionAssets: {
@@ -175,9 +175,6 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     instance: ObjectInstance,
     _params: Record<string, any>,
   ): Promise<ActionResult> {
-    if (!instance.state.watered) {
-      return { success: false, error: "Crop needs water to grow" };
-    }
     if (instance.state.growthStage >= 4) {
       return { success: false, error: "Crop is already mature" };
     }
@@ -186,7 +183,6 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     }
 
     instance.state.growthStage += 1;
-    instance.state.watered = false;
     const isHarvestable = instance.state.growthStage >= 4;
 
     if (isHarvestable) {
@@ -309,6 +305,28 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("crop-revive", { duration: 1500 });
     this.renderer.displayText(
       `You water the wilted ${instance.state.type}. Slowly, it perks back up as the water revitalizes it!`,
+      { waitForClick: true },
+    );
+
+    return { success: true };
+  }
+
+  protected async handleMature(
+    instance: ObjectInstance,
+    _params: Record<string, any>,
+  ): Promise<ActionResult> {
+    if (instance.state.growthStage >= 4) {
+      return { success: false, error: "Crop is already mature" };
+    }
+
+    instance.state.growthStage = 4;
+    instance.state.wilted = false;
+
+    this.renderer.playAnimation("crop-mature", { duration: 1500 });
+    this.renderer.playSound("growth-complete");
+    this.renderer.showParticle("sparkle", { duration: 1000 });
+    this.renderer.displayText(
+      `The ${instance.state.type} surges with growth and instantly reaches full maturity! Ready for harvest.`,
       { waitForClick: true },
     );
 

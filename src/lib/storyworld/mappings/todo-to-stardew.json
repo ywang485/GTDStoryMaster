@@ -5,37 +5,43 @@
   "tool": "todo-list",
   "storyworld": "stardew-valley-world-v1",
   "mappings": {
-    "object_mapping": {
-      "source": "tasks",
-      "target": "crops"},
-    "state_mapping": {
-      "rules": [
+    "object_mappings": [
+      {
+        "source": "tasks",
+        "target": "crops",
+        "initial_state": []
+      }
+    ],
+    "action_mappings": [
         {
-          "task_state": "pending",
-          "crop_state": {
-            "growthStage": 0,
-            "watered": false
-          }
+          "source_action": "updateStatus",
+          "type": "toolAction",
+          "condition": { "param": "status", "equals": "completed" },
+          "target_action": "mature",
+          "target_params": []
         },
         {
-          "task_state": "in_progress",
-          "crop_state": {
-            "growthStage": 2,
-            "watered": true
-          }
+          "source_action": "updateStatus",
+          "type": "toolAction",
+          "condition": { "param": "status", "equals": "canceled" },
+          "target_action": "wilt",
+          "target_params": []
         },
         {
-          "task_state": "completed",
-          "crop_state": {
-            "growthStage": 4,
-            "watered": true
-          }
+          "source_action": "updateStatus",
+          "type": "toolAction",
+          "condition": { "param": "status", "equals": "in_progress" },
+          "target_action": "grow",
+          "target_params": []
+        },
+        {
+          "source_action": "clickObject",
+          "type": "UIAction",
+          "target_action": "harvest",
+          "target_params": []
         }
-      ]
-    },
-    "metadata_mapping": {
-      "description": "Maps task metadata to crop properties",
-      "rules": [
+      ],
+    "metadata_mapping": [
         {
           "task_field": "content",
           "crop_field": "id",
@@ -46,12 +52,7 @@
           "crop_field": "label",
           "transform": "truncate",
           "max_length": 30
-        },
-        {
-          "task_field": "activeForm",
-          "crop_field": "description"
         }
       ]
-    }
   }
 }

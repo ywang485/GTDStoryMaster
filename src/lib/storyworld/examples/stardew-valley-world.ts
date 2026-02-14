@@ -85,6 +85,7 @@ export const stardewValleyWorld: StoryWorldDefinition = {
         { id: "fertilize", name: "Fertilize", description: "Apply fertilizer to boost growth" },
         { id: "wilt", name: "Wilt", description: "Crop wilts from lack of water (called daily if not watered)" },
         { id: "revive", name: "Revive", description: "Revive a wilted crop by watering it" },
+        { id: "mature", name: "Mature", description: "Instantly grow crop to maximum growth stage" },
       ],
       renderConfig: {
         layer: 1,
