@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSetupStore } from "@/stores/use-setup-store";
 import { useGameStore } from "@/stores/use-game-store";
 import { useToolStore } from "@/stores/use-tool-store";
@@ -45,6 +45,7 @@ const loadingMessages = [
 
 export function PreparationScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { profile, storyWorld, tasks } = useSetupStore();
   const {
     setPhase,
@@ -181,7 +182,8 @@ export function PreparationScreen() {
       setStage("ready");
 
       // Navigate to play
-      router.push("/adventure");
+      const mode = searchParams.get("mode");
+      router.push(mode === "visual" ? "/adventure-visual" : "/adventure");
     } catch (err) {
       console.error("Preparation failed:", err);
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -191,6 +193,7 @@ export function PreparationScreen() {
     storyWorld,
     tasks,
     profile,
+    searchParams,
     setOptimizedTasks,
     setPlotStructure,
     setCharacter,

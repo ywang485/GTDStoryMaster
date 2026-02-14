@@ -140,6 +140,14 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
         { id: "wind-rustling", type: "sound", url: "/assets/farm/ambient/wind.mp3", metadata: { loop: true, volume: 0.15 } },
       ],
     };
+
+    // Placement margins: keep crops in the lower-center "farmland" area
+    this.placementMargins = {
+      crop:      { top: 300, bottom: 100, left: 60, right: 60 },
+      livestock: { top: 200, bottom: 120, left: 80, right: 80 },
+      villager:  { top: 100, bottom: 200, left: 40, right: 40 },
+      facility:  { top: 50,  bottom: 250, left: 40, right: 40 },
+    };
   }
 
   // ========================================

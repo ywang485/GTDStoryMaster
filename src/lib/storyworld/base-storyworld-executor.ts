@@ -19,6 +19,14 @@ import type {
 } from "@/types/storyworld-definition";
 import type { StoryWorldRendererInterface } from "./renderer-interface";
 
+/** Margins defining the placement-prohibited area from each canvas edge. */
+export interface PlacementMargin {
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
+}
+
 export abstract class BaseStoryWorldExecutor {
   readonly definition: StoryWorldDefinition;
   protected state: StoryWorldState;
@@ -30,6 +38,13 @@ export abstract class BaseStoryWorldExecutor {
 
   /** Global assets (backgrounds, ambient sounds, etc.) */
   protected globalAssets: AssetLibrary = {};
+
+  /** Canvas dimensions used for random placement (set via setCanvasSize) */
+  protected canvasWidth = 800;
+  protected canvasHeight = 600;
+
+  /** Per-object-type placement margins (key: objectType id) */
+  protected placementMargins: Record<string, PlacementMargin> = {};
 
   constructor(definition: StoryWorldDefinition, existingState?: StoryWorldState) {
     this.definition = definition;
@@ -54,6 +69,12 @@ export abstract class BaseStoryWorldExecutor {
   /** Inject the renderer so action handlers can call it directly */
   setRenderer(renderer: StoryWorldRendererInterface): void {
     this._renderer = renderer;
+  }
+
+  /** Update canvas dimensions used for random placement */
+  setCanvasSize(width: number, height: number): void {
+    this.canvasWidth = width;
+    this.canvasHeight = height;
   }
 
   protected get renderer(): StoryWorldRendererInterface {
@@ -98,6 +119,17 @@ export abstract class BaseStoryWorldExecutor {
       Object.assign(state, objectType.initialState);
     }
 
+    // Compute random position within margins for this type
+    const margin = this.placementMargins[typeId] || {};
+    const minX = margin.left ?? 0;
+    const maxX = this.canvasWidth - (margin.right ?? 0);
+    const minY = margin.top ?? 0;
+    const maxY = this.canvasHeight - (margin.bottom ?? 0);
+    const position = {
+      x: minX + Math.random() * Math.max(0, maxX - minX),
+      y: minY + Math.random() * Math.max(0, maxY - minY),
+    };
+
     const instance: ObjectInstance = {
       id,
       typeId,
@@ -105,6 +137,7 @@ export abstract class BaseStoryWorldExecutor {
       renderState: {
         visible: true,
         opacity: 1,
+        position,
       },
     };
 

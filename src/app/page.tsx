@@ -74,12 +74,12 @@ function SetupWizard() {
     }
   };
 
-  const handleBeginAdventure = () => {
+  const handleBeginAdventure = (visual?: boolean) => {
     if (isSetupComplete()) {
       if (typeof window !== "undefined") {
         localStorage.clear();
       }
-      router.push("/setup/prepare");
+      router.push(visual ? "/setup/prepare?mode=visual" : "/setup/prepare");
     }
   };
 
@@ -178,13 +178,22 @@ function SetupWizard() {
               Next &rarr;
             </button>
           ) : (
-            <button
-              onClick={handleBeginAdventure}
-              disabled={!isSetupComplete()}
-              className="px-6 py-2 bg-black text-white font-light rounded-none hover:bg-gray-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
-            >
-              Begin Your Adventure
-            </button>
+            <>
+              <button
+                onClick={() => handleBeginAdventure(true)}
+                disabled={!isSetupComplete()}
+                className="px-6 py-2 border border-black text-black font-light rounded-none hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
+              >
+                Visual Adventure
+              </button>
+              <button
+                onClick={() => handleBeginAdventure()}
+                disabled={!isSetupComplete()}
+                className="px-6 py-2 bg-black text-white font-light rounded-none hover:bg-gray-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
+              >
+                Begin Your Adventure
+              </button>
+            </>
           )}
         </div>
       </footer>

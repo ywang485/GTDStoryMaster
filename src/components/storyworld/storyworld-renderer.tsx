@@ -41,7 +41,13 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
     const [narrativeQueue, setNarrativeQueue] = useState<string[]>([]);
     const [currentNarrative, setCurrentNarrative] = useState<string>("");
     const [isTyping, setIsTyping] = useState(false);
+    const [isStreamingText, setIsStreamingText] = useState(false);
     const [activeAnimations, setActiveAnimations] = useState<Set<string>>(new Set());
+
+    // Refs for synchronous access inside imperative handle (avoids stale closures)
+    const isStreamingTextRef = useRef(false);
+    const currentNarrativeRef = useRef("");
+    const streamingBufferRef = useRef<string | null>(null);
     const backgroundImageRef = useRef<HTMLImageElement | null>(null);
     const spriteImages = useRef<Map<string, HTMLImageElement>>(new Map());
     const spriteMetadata = useRef<Map<string, {
@@ -117,7 +123,30 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
             typewriterEffect(text, speed);
           } else {
             setCurrentNarrative(text);
+            currentNarrativeRef.current = text;
           }
+        }
+      },
+      streamText(text: string) {
+        if (isStreamingTextRef.current) {
+          // Already streaming — update the textbox directly
+          setCurrentNarrative(text);
+          currentNarrativeRef.current = text;
+        } else if (currentNarrativeRef.current === "") {
+          // Textbox is free — start streaming
+          setCurrentNarrative(text);
+          currentNarrativeRef.current = text;
+          isStreamingTextRef.current = true;
+          setIsStreamingText(true);
+        } else {
+          // Committed text or queue waiting — buffer the partial text
+          streamingBufferRef.current = text;
+        }
+      },
+      commitStreamedText() {
+        if (isStreamingTextRef.current) {
+          isStreamingTextRef.current = false;
+          setIsStreamingText(false);
         }
       },
     }), [currentNarrative, isTyping, width, height]);
@@ -236,8 +265,9 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
       const objects = Object.values(state.objects);
 
       objects.forEach((obj, index) => {
-        const x = 100 + (index % 6) * 120;
-        const y = canvas.height / 2 + 50 + Math.floor(index / 6) * 100;
+        // Use stored position if available, otherwise fall back to grid layout
+        const x = obj.renderState?.position?.x ?? (100 + (index % 6) * 120);
+        const y = obj.renderState?.position?.y ?? (canvas.height / 2 + 50 + Math.floor(index / 6) * 100);
 
         const spriteId = getSpriteForObject(obj);
         const spriteImage = spriteId ? spriteImages.current.get(spriteId) : null;
@@ -403,9 +433,11 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
       setIsTyping(true);
       let index = 0;
       setCurrentNarrative("");
+      currentNarrativeRef.current = "";
 
       const interval = setInterval(() => {
         if (index < text.length) {
+          currentNarrativeRef.current += text[index];
           setCurrentNarrative((prev) => prev + text[index]);
           index++;
         } else {
@@ -421,13 +453,28 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
         return;
       }
 
+      // Ignore clicks while actively streaming
+      if (isStreamingTextRef.current) {
+        return;
+      }
+
       if (narrativeQueue.length > 0) {
         const [next, ...rest] = narrativeQueue;
         setNarrativeQueue(rest);
         typewriterEffect(next, 40);
         onNarrativeClick?.();
+      } else if (streamingBufferRef.current !== null) {
+        // Show buffered streaming text and resume streaming
+        const bufferedText = streamingBufferRef.current;
+        streamingBufferRef.current = null;
+        setCurrentNarrative(bufferedText);
+        currentNarrativeRef.current = bufferedText;
+        isStreamingTextRef.current = true;
+        setIsStreamingText(true);
+        onNarrativeClick?.();
       } else {
         setCurrentNarrative("");
+        currentNarrativeRef.current = "";
       }
     };
 
@@ -451,15 +498,16 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
             <div className="stardew-textbox">
               <p className="text-lg leading-relaxed">
                 {currentNarrative}
+                {isStreamingText && <span className="animate-pulse ml-0.5">▌</span>}
               </p>
-              {!isTyping && narrativeQueue.length === 0 && (
+              {!isTyping && !isStreamingText && narrativeQueue.length === 0 && streamingBufferRef.current === null && (
                 <div className="text-right text-sm opacity-70 mt-2">
                   (Click to close)
                 </div>
               )}
-              {!isTyping && narrativeQueue.length > 0 && (
+              {!isTyping && !isStreamingText && (narrativeQueue.length > 0 || streamingBufferRef.current !== null) && (
                 <div className="text-right text-sm opacity-70 mt-2">
-                  (Click to continue) {narrativeQueue.length} more
+                  (Click to continue)
                 </div>
               )}
             </div>

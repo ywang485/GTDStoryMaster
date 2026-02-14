@@ -6,6 +6,7 @@
  */
 
 export { BaseStoryWorldExecutor } from "./base-storyworld-executor";
+export type { PlacementMargin } from "./base-storyworld-executor";
 export { StardewValleyExecutor } from "./examples/stardew-valley-executor";
 export { FantasyWorldExecutor } from "./examples/fantasy-executor";
 

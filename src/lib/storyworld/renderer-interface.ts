@@ -45,4 +45,12 @@ export interface StoryWorldRendererInterface {
     speed?: number;
     waitForClick?: boolean;
   }): void;
+
+  /** Stream partial text into the current textbox (replaces content, no animation).
+   *  If committed text is waiting for click, the new text is buffered until clicked. */
+  streamText(text: string): void;
+
+  /** Mark the current streamed text as complete, enabling click-to-advance.
+   *  No-op if not currently streaming. */
+  commitStreamedText(): void;
 }
