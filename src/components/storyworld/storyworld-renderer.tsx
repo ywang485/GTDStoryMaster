@@ -20,6 +20,7 @@ interface StoryWorldRendererProps {
   executor: BaseStoryWorldExecutor;
   width?: number;
   height?: number;
+  labelMaxWidth?: number;
   onNarrativeClick?: () => void;
 }
 
@@ -29,6 +30,7 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
       executor,
       width = 800,
       height = 600,
+      labelMaxWidth = 80,
       onNarrativeClick,
     },
     ref,
@@ -322,11 +324,28 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
           else if (obj.typeId === "facility") renderFacility(ctx, x, y, obj);
         }
 
-        // Label
+        // Label (word-wrap if wider than labelMaxWidth)
         ctx.fillStyle = "#000000";
         ctx.font = "10px monospace";
         ctx.textAlign = "center";
-        ctx.fillText(obj.id, x, y + 40);
+        const labelText: string = obj.state.label || obj.id;
+        const words = labelText.split(" ");
+        const lines: string[] = [];
+        let currentLine = words[0];
+        for (let w = 1; w < words.length; w++) {
+          const test = currentLine + " " + words[w];
+          if (ctx.measureText(test).width > labelMaxWidth) {
+            lines.push(currentLine);
+            currentLine = words[w];
+          } else {
+            currentLine = test;
+          }
+        }
+        lines.push(currentLine);
+        const lineHeight = 12;
+        for (let l = 0; l < lines.length; l++) {
+          ctx.fillText(lines[l], x, y + 40 + l * lineHeight);
+        }
       });
     }, [executor, getSpriteForObject]);
 

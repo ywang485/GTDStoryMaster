@@ -72,6 +72,15 @@ export class SoundEngine {
       case "animal-content-sound":
         this.generateAnimalSound();
         break;
+      case "growth-complete":
+        this.generateGrowthCompleteSound();
+        break;
+      case "wilt-sound":
+        this.generateWiltSound();
+        break;
+      case "fertilizer-sound":
+        this.generateFertilizerSound();
+        break;
       default:
         console.log(`Sound not implemented: ${soundId}`);
     }
@@ -392,5 +401,82 @@ export class SoundEngine {
     osc.start(now);
     osc.stop(now + 0.5);
     lfo.stop(now + 0.5);
+  }
+
+  private generateGrowthCompleteSound(): void {
+    if (!this.audioContext || !this.sfxGainNode) return;
+
+    const now = this.audioContext.currentTime;
+
+    // 8-bit ascending fanfare: C5 → E5 → G5 → C6
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      const osc = this.audioContext!.createOscillator();
+      const gain = this.audioContext!.createGain();
+
+      osc.type = "square";
+      osc.frequency.value = freq;
+
+      const t = now + i * 0.12;
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.setValueAtTime(0.2, t + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.11);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGainNode!);
+
+      osc.start(t);
+      osc.stop(t + 0.11);
+    });
+  }
+
+  private generateWiltSound(): void {
+    if (!this.audioContext || !this.sfxGainNode) return;
+
+    const now = this.audioContext.currentTime;
+
+    // 8-bit descending sad tone: G4 → E4 → C4
+    [392, 329.63, 261.63].forEach((freq, i) => {
+      const osc = this.audioContext!.createOscillator();
+      const gain = this.audioContext!.createGain();
+
+      osc.type = "square";
+      osc.frequency.value = freq;
+
+      const t = now + i * 0.18;
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.setValueAtTime(0.15, t + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.17);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGainNode!);
+
+      osc.start(t);
+      osc.stop(t + 0.17);
+    });
+  }
+
+  private generateFertilizerSound(): void {
+    if (!this.audioContext || !this.sfxGainNode) return;
+
+    const now = this.audioContext.currentTime;
+
+    // 8-bit sprinkle: quick staccato notes with rising pitch
+    [440, 494, 523.25, 587.33, 659.25].forEach((freq, i) => {
+      const osc = this.audioContext!.createOscillator();
+      const gain = this.audioContext!.createGain();
+
+      osc.type = "square";
+      osc.frequency.value = freq;
+
+      const t = now + i * 0.07;
+      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGainNode!);
+
+      osc.start(t);
+      osc.stop(t + 0.05);
+    });
   }
 }
