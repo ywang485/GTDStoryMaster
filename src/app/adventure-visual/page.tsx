@@ -54,7 +54,10 @@ async function loadExecutor(storyworldId: string): Promise<BaseStoryWorldExecuto
 function extractStoryText(rawText: string): string | null {
   const storyMatch = rawText.match(/STORY:\s*([\s\S]*?)(?=\nDATA:|$)/);
   if (storyMatch) {
-    return storyMatch[1].trim();
+    // During streaming the full "\nDATA:" may not have arrived yet, so the
+    // regex falls back to $ and captures a partial prefix (e.g. "\nDAT").
+    // Strip any such trailing fragment before returning.
+    return storyMatch[1].replace(/\nD(?:A(?:T(?:A:?)?)?)?$/, "").trim();
   }
 
   let text = rawText.trim();
