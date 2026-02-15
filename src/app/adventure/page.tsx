@@ -259,6 +259,12 @@ function AdventureGame() {
                       toolCall.params.taskId,
                       toolCall.params.status
                     );
+                    // Update completedTaskIds so the quest sidebar reflects changes
+                    if (toolCall.params.status === "completed") {
+                      completeTask(toolCall.params.taskId);
+                    } else if (toolCall.params.status === "cancelled") {
+                      skipTask(toolCall.params.taskId);
+                    }
                     break;
 
                   case "reorderTasks":
@@ -331,6 +337,8 @@ function AdventureGame() {
       addNarrativeEntry,
       incrementTurn,
       syncTasksFromTool,
+      completeTask,
+      skipTask,
       getTasks,
       getToolPublicStates,
     ],

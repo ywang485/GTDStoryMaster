@@ -385,6 +385,12 @@ function AdventureGameVisual() {
                       toolCall.params.taskId,
                       toolCall.params.status,
                     );
+                    // Update completedTaskIds so the quest sidebar reflects changes
+                    if (toolCall.params.status === "completed") {
+                      completeTask(toolCall.params.taskId);
+                    } else if (toolCall.params.status === "cancelled") {
+                      skipTask(toolCall.params.taskId);
+                    }
                     // Propagate to storyworld via bridge
                     if (bridge) {
                       await bridge.onToolAction(
@@ -491,6 +497,8 @@ function AdventureGameVisual() {
       addNarrativeEntry,
       incrementTurn,
       syncTasksFromTool,
+      completeTask,
+      skipTask,
       getTasks,
       getToolPublicStates,
     ],
