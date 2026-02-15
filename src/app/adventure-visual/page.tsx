@@ -8,11 +8,10 @@ import { useUIStore } from "@/stores/use-ui-store";
 import { useToolStore } from "@/stores/use-tool-store";
 import { HydrationGate } from "@/components/providers/hydration-gate";
 import { QuestSidebar } from "@/components/game/quest-sidebar";
-import { ActionBar } from "@/components/game/action-bar";
 import { SceneHeader } from "@/components/game/scene-header";
 import { StoryWorldRenderer } from "@/components/storyworld";
 import { NarrativeViewport } from "@/components/game/narrative-viewport";
-import { getCurrentScene, getActiveTask } from "@/lib/engine/quest-tracker";
+import { getCurrentScene } from "@/lib/engine/quest-tracker";
 import { processAction } from "@/lib/engine/game-manager";
 import {
   buildTurnContext,
@@ -141,7 +140,6 @@ function AdventureGameVisual() {
   const { getPublicStates: getToolPublicStates } = useToolStore();
 
   const [streamingText, setStreamingText] = useState("");
-  const [exampleResponses, setExampleResponses] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const hasInitialized = useRef(false);
 
@@ -195,10 +193,6 @@ function AdventureGameVisual() {
     ? getCurrentScene(plotStructure, completedTaskIds)
     : null;
 
-  const activeTask = currentScene
-    ? getActiveTask(tasks, currentScene, completedTaskIds)
-    : null;
-
   const currentActTitle = plotStructure
     ? plotStructure.acts.find((act) =>
         act.scenes.some((s) => s.id === currentSceneId),
@@ -236,7 +230,6 @@ function AdventureGameVisual() {
 
       setIsStreaming(true);
       setStreamingText("");
-      setExampleResponses([]);
 
       const env = getCurrentEnvironment(environment.mood, environment.weather);
       setEnvironment(env);
@@ -253,6 +246,8 @@ function AdventureGameVisual() {
         environment: env,
         toolStates,
       });
+
+      let responseExamples: string[] = [];
 
       try {
         const response = await fetch("/api/ai/narrate", {
@@ -435,11 +430,8 @@ function AdventureGameVisual() {
             syncTasksFromTool();
           }
 
-          if (
-            finalResponse.exampleResponses &&
-            finalResponse.exampleResponses.length > 0
-          ) {
-            setExampleResponses(finalResponse.exampleResponses);
+          if (finalResponse.exampleResponses?.length > 0) {
+            responseExamples = finalResponse.exampleResponses;
           }
         } else {
           console.error("No valid final response found");
@@ -468,6 +460,17 @@ function AdventureGameVisual() {
       } finally {
         setIsStreaming(false);
       }
+
+      // After narration finishes, prompt for player input via the renderer
+      if (
+        rendererRef.current &&
+        useGameStore.getState().phase === "playing"
+      ) {
+        const userInput = await rendererRef.current.getUserInput({
+          exampleResponses: responseExamples,
+        });
+        handleActionRef.current("freetext", userInput);
+      }
     },
     [
       plotStructure,
@@ -491,6 +494,9 @@ function AdventureGameVisual() {
   );
 
   // ── Player action handler ──────────────────────────────────────────────
+
+  // Ref so handleNarrate can call handleAction without a circular useCallback dep
+  const handleActionRef = useRef<(type: string, content: string, taskId?: string) => void>(() => {});
 
   const handleAction = useCallback(
     async (type: string, content: string, taskId?: string) => {
@@ -588,6 +594,7 @@ function AdventureGameVisual() {
       handleNarrate,
     ],
   );
+  handleActionRef.current = handleAction;
 
   // ── Render ─────────────────────────────────────────────────────────────
 
@@ -676,14 +683,6 @@ function AdventureGameVisual() {
             )}
           </div>
 
-          <div className="shrink-0">
-            <ActionBar
-              activeTask={activeTask}
-              isStreaming={isStreaming}
-              onAction={handleAction}
-              exampleResponses={exampleResponses}
-            />
-          </div>
         </div>
 
         {/* Quest Sidebar */}

@@ -44,6 +44,18 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
     const [isStreamingText, setIsStreamingText] = useState(false);
     const [activeAnimations, setActiveAnimations] = useState<Set<string>>(new Set());
 
+    // User input prompt state
+    const [inputPromptActive, setInputPromptActive] = useState(false);
+    const [inputValue, setInputValue] = useState("");
+    const [inputExamples, setInputExamples] = useState<string[]>([]);
+    const [inputPlaceholder, setInputPlaceholder] = useState("");
+    const inputResolveRef = useRef<((value: string) => void) | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+    // Deferred activation: getUserInput stores opts here; a useEffect activates
+    // the prompt once all narrative text has been dismissed.
+    const pendingInputRef = useRef<{ placeholder?: string; exampleResponses?: string[] } | null>(null);
+    const [inputRequestTrigger, setInputRequestTrigger] = useState(0);
+
     // Refs for synchronous access inside imperative handle (avoids stale closures)
     const isStreamingTextRef = useRef(false);
     const currentNarrativeRef = useRef("");
@@ -148,6 +160,14 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
           isStreamingTextRef.current = false;
           setIsStreamingText(false);
         }
+      },
+      getUserInput(opts?: { placeholder?: string; exampleResponses?: string[] }) {
+        return new Promise<string>((resolve) => {
+          inputResolveRef.current = resolve;
+          pendingInputRef.current = opts ?? {};
+          // Bump trigger so the deferred-activation effect re-evaluates
+          setInputRequestTrigger((n) => n + 1);
+        });
       },
     }), [currentNarrative, isTyping, width, height]);
 
@@ -447,6 +467,47 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
       }, speed);
     };
 
+    // -----------------------------------------------------------------------
+    // User input prompt
+    // -----------------------------------------------------------------------
+
+    const handleInputSubmit = useCallback((text: string) => {
+      if (!text.trim()) return;
+      setInputPromptActive(false);
+      setInputValue("");
+      setInputExamples([]);
+      inputResolveRef.current?.(text.trim());
+      inputResolveRef.current = null;
+    }, []);
+
+    // Auto-focus the input field when the prompt appears
+    useEffect(() => {
+      if (inputPromptActive) {
+        // Small delay to let the DOM render before focusing
+        const timer = setTimeout(() => inputRef.current?.focus(), 50);
+        return () => clearTimeout(timer);
+      }
+    }, [inputPromptActive]);
+
+    // Deferred activation: show the input prompt once all narrative text is dismissed
+    useEffect(() => {
+      if (
+        pendingInputRef.current &&
+        !inputPromptActive &&
+        !currentNarrative &&
+        narrativeQueue.length === 0 &&
+        !isTyping &&
+        !isStreamingText
+      ) {
+        const opts = pendingInputRef.current;
+        pendingInputRef.current = null;
+        setInputValue("");
+        setInputExamples(opts.exampleResponses ?? []);
+        setInputPlaceholder(opts.placeholder ?? "");
+        setInputPromptActive(true);
+      }
+    }, [currentNarrative, narrativeQueue.length, isTyping, isStreamingText, inputPromptActive, inputRequestTrigger]);
+
     const handleNarrativeClick = () => {
       if (isTyping) {
         setIsTyping(false);
@@ -490,7 +551,7 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
           className="absolute inset-0"
         />
 
-        {currentNarrative && (
+        {currentNarrative && !inputPromptActive && (
           <div
             className="absolute bottom-4 left-4 right-4 cursor-pointer"
             onClick={handleNarrativeClick}
@@ -510,6 +571,50 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
                   (Click to continue)
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {inputPromptActive && (
+          <div className="absolute bottom-4 left-4 right-4">
+            <div className="stardew-textbox">
+              {inputExamples.length > 0 && (
+                <div className="stardew-input-examples">
+                  {inputExamples.map((example, i) => (
+                    <button
+                      key={i}
+                      className="stardew-example-btn"
+                      onClick={() => handleInputSubmit(example)}
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleInputSubmit(inputValue);
+                }}
+              >
+                <div className="stardew-input-row">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder={inputPlaceholder || "Type your response..."}
+                    className="stardew-input"
+                  />
+                  <button
+                    type="submit"
+                    className="stardew-submit-btn"
+                    disabled={!inputValue.trim()}
+                  >
+                    OK
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -540,6 +645,81 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
 
           .stardew-textbox:hover {
             transform: scale(1.02);
+          }
+
+          .stardew-input-examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+          }
+
+          .stardew-example-btn {
+            background: #8b6f47;
+            color: #fffef7;
+            border: 2px solid #6b5333;
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+          }
+
+          .stardew-example-btn:hover {
+            background: #a0824f;
+            transform: translateY(-1px);
+          }
+
+          .stardew-example-btn:active {
+            transform: translateY(0);
+          }
+
+          .stardew-input-row {
+            display: flex;
+            gap: 8px;
+          }
+
+          .stardew-input {
+            flex: 1;
+            background: #f5f0e0;
+            border: 2px solid #c4a876;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 16px;
+            font-family: inherit;
+            color: #331a00;
+            outline: none;
+          }
+
+          .stardew-input:focus {
+            border-color: #8b6f47;
+            box-shadow: 0 0 0 2px rgba(139, 111, 71, 0.3);
+          }
+
+          .stardew-input::placeholder {
+            color: #a89070;
+          }
+
+          .stardew-submit-btn {
+            background: #5a8f3d;
+            color: #fffef7;
+            border: 2px solid #3d6b28;
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-size: 16px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.15s;
+          }
+
+          .stardew-submit-btn:hover:not(:disabled) {
+            background: #6ba347;
+          }
+
+          .stardew-submit-btn:disabled {
+            opacity: 0.5;
+            cursor: default;
           }
 
           .animation-indicator {

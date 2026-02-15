@@ -53,4 +53,11 @@ export interface StoryWorldRendererInterface {
   /** Mark the current streamed text as complete, enabling click-to-advance.
    *  No-op if not currently streaming. */
   commitStreamedText(): void;
+
+  /** Prompt the user for free-text input, optionally showing clickable
+   *  example responses. Resolves with the submitted text. */
+  getUserInput(opts?: {
+    placeholder?: string;
+    exampleResponses?: string[];
+  }): Promise<string>;
 }
