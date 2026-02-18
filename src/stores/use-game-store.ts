@@ -80,7 +80,7 @@ export const useGameStore = create<GameState>()(
 
       reorderTasks: async (taskIds) => {
         const toolStore = useToolStore.getState();
-        await toolStore.reorderTasks(taskIds);
+        await toolStore.executeAction("todo-list", "todolist-root", "reorderTasks", { taskIds });
         get().syncTasksFromTool();
       },
 
@@ -91,7 +91,7 @@ export const useGameStore = create<GameState>()(
 
       completeTask: async (taskId) => {
         const toolStore = useToolStore.getState();
-        await toolStore.updateTaskStatus(taskId, "completed");
+        await toolStore.executeAction("todo-list", taskId, "updateStatus", { status: "completed" });
         get().syncTasksFromTool();
 
         // Update completedTaskIds for backwards compatibility
@@ -102,7 +102,7 @@ export const useGameStore = create<GameState>()(
 
       skipTask: async (taskId) => {
         const toolStore = useToolStore.getState();
-        await toolStore.updateTaskStatus(taskId, "cancelled");
+        await toolStore.executeAction("todo-list", taskId, "updateStatus", { status: "cancelled" });
         get().syncTasksFromTool();
 
         // Update completedTaskIds for backwards compatibility
@@ -122,7 +122,7 @@ export const useGameStore = create<GameState>()(
               : status === "completed"
                 ? "completed"
                 : "pending";
-        await toolStore.updateTaskStatus(taskId, newStatus);
+        await toolStore.executeAction("todo-list", taskId, "updateStatus", { status: newStatus });
         get().syncTasksFromTool();
       },
 
@@ -157,8 +157,9 @@ export const useGameStore = create<GameState>()(
 
       getTasks: () => {
         const toolStore = useToolStore.getState();
-        if (toolStore.todoListState) {
-          return getOrderedTasksFromTool(toolStore.todoListState.instances);
+        const todoState = toolStore.getToolState("todo-list");
+        if (todoState) {
+          return getOrderedTasksFromTool(todoState.instances);
         }
         // Fallback to cached tasks if tool not initialized
         return get().tasks;
@@ -166,8 +167,9 @@ export const useGameStore = create<GameState>()(
 
       syncTasksFromTool: () => {
         const toolStore = useToolStore.getState();
-        if (toolStore.todoListState) {
-          const tasks = getOrderedTasksFromTool(toolStore.todoListState.instances);
+        const todoState = toolStore.getToolState("todo-list");
+        if (todoState) {
+          const tasks = getOrderedTasksFromTool(todoState.instances);
           set({ tasks });
         }
       },

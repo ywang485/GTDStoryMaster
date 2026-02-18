@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSetupStore } from "@/stores/use-setup-store";
 import { useGameStore } from "@/stores/use-game-store";
 import { useToolStore } from "@/stores/use-tool-store";
-import { migrateTasksToTodoList } from "@/lib/tools";
+import { TodoListToolExecutor, migrateTasksToTodoList } from "@/lib/tools";
 import type { OptimizedTask } from "@/types/task";
 import type { PlotStructure } from "@/types/story";
 
@@ -55,7 +55,7 @@ export function PreparationScreen() {
     setTasks,
     syncTasksFromTool,
   } = useGameStore();
-  const { initializeTodoList } = useToolStore();
+  const { registerTool, executeAction } = useToolStore();
 
   const [stage, setStage] = useState<
     "optimizing" | "plotting" | "ready" | "error"
@@ -165,12 +165,18 @@ export function PreparationScreen() {
 
       // Initialize TodoList tool with tasks
       const migratedTasks = migrateTasksToTodoList(gameTasks);
-      await initializeTodoList(migratedTasks);
+      await registerTool("todo-list", new TodoListToolExecutor(), {
+        config: {
+          autoArchiveCompleted: false,
+          defaultPriority: "medium",
+          enableDependencies: true,
+        },
+        initialTasks: migratedTasks,
+      });
 
       // Set first task to in_progress (equivalent to active)
       if (gameTasks.length > 0) {
-        const toolStore = useToolStore.getState();
-        await toolStore.updateTaskStatus(gameTasks[0].id, "in_progress");
+        await executeAction("todo-list", gameTasks[0].id, "updateStatus", { status: "in_progress" });
       }
 
       // Sync tasks from tool to game store
@@ -183,7 +189,11 @@ export function PreparationScreen() {
 
       // Navigate to play
       const mode = searchParams.get("mode");
-      router.push(mode === "visual" ? "/adventure-visual" : "/adventure");
+      const dest =
+        mode === "visual" ? "/adventure-visual"
+        : mode === "pomodoro" ? "/adventure-pomodoro"
+        : "/adventure";
+      router.push(dest);
     } catch (err) {
       console.error("Preparation failed:", err);
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -200,7 +210,8 @@ export function PreparationScreen() {
     setTasks,
     setPhase,
     router,
-    initializeTodoList,
+    registerTool,
+    executeAction,
     syncTasksFromTool,
   ]);
 

@@ -2,287 +2,208 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import {
-  TodoListToolExecutor,
-  todoListToolDefinition,
-  type ToolState,
-  type ActionResult
-} from "@/lib/tools";
+import { BaseToolExecutor } from "@/lib/tools";
+import type { ToolState, ActionResult } from "@/lib/tools";
+
+// ── Interface ───────────────────────────────────────────────────────────────
 
 interface ToolStoreState {
-  // Todo list tool instance
-  todoListTool: TodoListToolExecutor | null;
-  todoListState: ToolState | null;
+  /** Transient executor instances (not persisted) */
+  tools: Record<string, BaseToolExecutor>;
 
-  // Initialization
-  initializeTodoList: (initialTasks?: Array<{
-    title: string;
-    description?: string;
-    priority?: "low" | "medium" | "high" | "critical";
-    estimatedMinutes?: number;
-    tags?: string[];
-  }>) => Promise<void>;
+  /** Persisted state snapshots, keyed by tool name */
+  toolStates: Record<string, ToolState>;
 
-  // Task operations
-  createTask: (params: {
-    title: string;
-    description?: string;
-    priority?: "low" | "medium" | "high" | "critical";
-    estimatedMinutes?: number;
-    tags?: string[];
-    dependencies?: string[];
-  }) => Promise<ActionResult>;
+  /**
+   * Register (or re-register) a tool. If persisted state exists for `name`,
+   * the executor is restored from it; otherwise `executor.initialize(input)`
+   * is called. No-ops if the tool is already registered.
+   */
+  registerTool: (
+    name: string,
+    executor: BaseToolExecutor,
+    input: unknown,
+  ) => Promise<void>;
 
-  updateTaskStatus: (taskId: string, status: "pending" | "in_progress" | "completed" | "blocked" | "cancelled", actualMinutes?: number) => Promise<ActionResult>;
+  /** Remove a tool from the registry and its persisted state. */
+  unregisterTool: (name: string) => void;
 
-  updateTaskDetails: (taskId: string, updates: {
-    title?: string;
-    description?: string;
-    priority?: "low" | "medium" | "high" | "critical";
-    estimatedMinutes?: number;
-    tags?: string[];
-  }) => Promise<ActionResult>;
+  /** Get a live executor by tool name (null if not registered). */
+  getTool: (name: string) => BaseToolExecutor | null;
 
-  deleteTask: (taskId: string) => Promise<ActionResult>;
+  /** Get the persisted state snapshot for a tool (null if not registered). */
+  getToolState: (name: string) => ToolState | null;
 
-  reorderTasks: (taskIds: string[]) => Promise<ActionResult>;
+  /** Generic action dispatch — works with any registered tool. */
+  executeAction: (
+    toolName: string,
+    instanceId: string,
+    actionName: string,
+    parameters?: Record<string, unknown>,
+  ) => Promise<ActionResult>;
 
-  clearCompleted: (archive?: boolean) => Promise<ActionResult>;
+  /** Public states for a single tool. */
+  getToolPublicStates: (
+    toolName: string,
+  ) => Record<string, Record<string, unknown>>;
 
-  getStats: () => Promise<ActionResult>;
+  /** All public states aggregated, keyed by tool name. */
+  getAllPublicStates: () => Record<
+    string,
+    Record<string, Record<string, unknown>>
+  >;
 
-  configureTodoList: (config: {
-    autoArchiveCompleted?: boolean;
-    defaultPriority?: "low" | "medium" | "high" | "critical";
-    enableDependencies?: boolean;
-    maxActiveTasks?: number;
-  }) => Promise<ActionResult>;
-
-  // State access
+  /** Refresh all persisted tool state snapshots from their executors. */
   refreshState: () => void;
-  getPublicStates: () => Record<string, Record<string, unknown>>;
-  getTodoListRootId: () => string;
 
-  // Reset
-  resetTool: () => Promise<void>;
+  /** Reset one tool (by name) or all tools (no argument). */
+  resetTool: (toolName?: string) => Promise<void>;
 }
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * When ToolState is deserialized from JSON, `instances` becomes a plain
+ * object instead of a Map. This restores it.
+ */
+function rehydrateToolState(raw: ToolState): ToolState {
+  const state = { ...raw };
+  if (state.instances && !(state.instances instanceof Map)) {
+    state.instances = new Map(Object.entries(state.instances));
+  }
+  return state;
+}
+
+// ── Store ───────────────────────────────────────────────────────────────────
 
 export const useToolStore = create<ToolStoreState>()(
   persist(
     (set, get) => ({
-      todoListTool: null,
-      todoListState: null,
+      tools: {},
+      toolStates: {},
 
-      initializeTodoList: async (initialTasks) => {
-        const tool = new TodoListToolExecutor();
+      registerTool: async (name, executor, input) => {
+        // Short-circuit if already registered
+        if (get().tools[name]) return;
 
-        const state = await tool.initialize({
-          config: {
-            autoArchiveCompleted: false,
-            defaultPriority: "medium",
-            enableDependencies: true
+        const existing = get().toolStates[name];
+        if (existing) {
+          // Restore executor from persisted state
+          (executor as any).state = rehydrateToolState(existing);
+        } else {
+          // Fresh initialization
+          await executor.initialize(input);
+        }
+
+        set((prev) => ({
+          tools: { ...prev.tools, [name]: executor },
+          toolStates: { ...prev.toolStates, [name]: executor.getState() },
+        }));
+      },
+
+      unregisterTool: (name) => {
+        set((prev) => {
+          const { [name]: _tool, ...restTools } = prev.tools;
+          const { [name]: _state, ...restStates } = prev.toolStates;
+          return { tools: restTools, toolStates: restStates };
+        });
+      },
+
+      getTool: (name) => get().tools[name] ?? null,
+
+      getToolState: (name) => get().toolStates[name] ?? null,
+
+      executeAction: async (toolName, instanceId, actionName, parameters = {}) => {
+        const tool = get().tools[toolName];
+        if (!tool) {
+          throw new Error(`Tool "${toolName}" not registered`);
+        }
+
+        const result = await tool.executeAction({
+          instanceId,
+          actionName,
+          parameters,
+          timestamp: new Date(),
+        });
+
+        // Refresh this tool's state snapshot
+        set((prev) => ({
+          toolStates: {
+            ...prev.toolStates,
+            [toolName]: tool.getState(),
           },
-          initialTasks: initialTasks ?? []
-        });
-
-        set({
-          todoListTool: tool,
-          todoListState: state
-        });
-      },
-
-      createTask: async (params) => {
-        const { todoListTool } = get();
-        if (!todoListTool) {
-          throw new Error("Todo list tool not initialized");
-        }
-
-        const result = await todoListTool.executeAction({
-          instanceId: "todolist-root",
-          actionName: "createTask",
-          parameters: params,
-          timestamp: new Date()
-        });
-
-        // Refresh state
-        get().refreshState();
+        }));
 
         return result;
       },
 
-      updateTaskStatus: async (taskId, status, actualMinutes) => {
-        const { todoListTool } = get();
-        if (!todoListTool) {
-          throw new Error("Todo list tool not initialized");
-        }
-
-        const result = await todoListTool.executeAction({
-          instanceId: taskId,
-          actionName: "updateStatus",
-          parameters: {
-            status,
-            ...(actualMinutes !== undefined && { actualMinutes })
-          },
-          timestamp: new Date()
-        });
-
-        // Refresh state
-        get().refreshState();
-
-        return result;
+      getToolPublicStates: (toolName) => {
+        const tool = get().tools[toolName];
+        if (!tool) return {};
+        return tool.exportPublicStates();
       },
 
-      updateTaskDetails: async (taskId, updates) => {
-        const { todoListTool } = get();
-        if (!todoListTool) {
-          throw new Error("Todo list tool not initialized");
+      getAllPublicStates: () => {
+        const { tools } = get();
+        const result: Record<string, Record<string, Record<string, unknown>>> = {};
+        for (const [name, tool] of Object.entries(tools)) {
+          result[name] = tool.exportPublicStates();
         }
-
-        const result = await todoListTool.executeAction({
-          instanceId: taskId,
-          actionName: "updateDetails",
-          parameters: updates,
-          timestamp: new Date()
-        });
-
-        // Refresh state
-        get().refreshState();
-
-        return result;
-      },
-
-      deleteTask: async (taskId) => {
-        const { todoListTool } = get();
-        if (!todoListTool) {
-          throw new Error("Todo list tool not initialized");
-        }
-
-        const result = await todoListTool.executeAction({
-          instanceId: taskId,
-          actionName: "delete",
-          parameters: {},
-          timestamp: new Date()
-        });
-
-        // Refresh state
-        get().refreshState();
-
-        return result;
-      },
-
-      reorderTasks: async (taskIds) => {
-        const { todoListTool } = get();
-        if (!todoListTool) {
-          throw new Error("Todo list tool not initialized");
-        }
-
-        const result = await todoListTool.executeAction({
-          instanceId: "todolist-root",
-          actionName: "reorderTasks",
-          parameters: { taskIds },
-          timestamp: new Date()
-        });
-
-        // Refresh state
-        get().refreshState();
-
-        return result;
-      },
-
-      clearCompleted: async (archive = true) => {
-        const { todoListTool } = get();
-        if (!todoListTool) {
-          throw new Error("Todo list tool not initialized");
-        }
-
-        const result = await todoListTool.executeAction({
-          instanceId: "todolist-root",
-          actionName: "clearCompleted",
-          parameters: { archive },
-          timestamp: new Date()
-        });
-
-        // Refresh state
-        get().refreshState();
-
-        return result;
-      },
-
-      getStats: async () => {
-        const { todoListTool } = get();
-        if (!todoListTool) {
-          throw new Error("Todo list tool not initialized");
-        }
-
-        const result = await todoListTool.executeAction({
-          instanceId: "todolist-root",
-          actionName: "getStats",
-          parameters: {},
-          timestamp: new Date()
-        });
-
-        return result;
-      },
-
-      configureTodoList: async (config) => {
-        const { todoListTool } = get();
-        if (!todoListTool) {
-          throw new Error("Todo list tool not initialized");
-        }
-
-        const result = await todoListTool.executeAction({
-          instanceId: "todolist-root",
-          actionName: "configure",
-          parameters: { config },
-          timestamp: new Date()
-        });
-
-        // Refresh state
-        get().refreshState();
-
         return result;
       },
 
       refreshState: () => {
-        const { todoListTool } = get();
-        if (todoListTool) {
-          set({ todoListState: todoListTool.getState() });
+        const { tools } = get();
+        const updates: Record<string, ToolState> = {};
+        for (const [name, tool] of Object.entries(tools)) {
+          updates[name] = tool.getState();
         }
+        set((prev) => ({
+          toolStates: { ...prev.toolStates, ...updates },
+        }));
       },
 
-      getPublicStates: () => {
-        const { todoListTool } = get();
-        if (!todoListTool) {
-          return {};
-        }
-        return todoListTool.exportPublicStates();
-      },
-
-      getTodoListRootId: () => "todolist-root",
-
-      resetTool: async () => {
-        const { todoListTool } = get();
-        if (todoListTool) {
-          await todoListTool.reset();
+      resetTool: async (toolName) => {
+        const { tools } = get();
+        if (toolName) {
+          const tool = tools[toolName];
+          if (tool) {
+            await tool.reset();
+            set((prev) => ({
+              toolStates: {
+                ...prev.toolStates,
+                [toolName]: tool.getState(),
+              },
+            }));
+          }
+        } else {
+          for (const tool of Object.values(tools)) {
+            await tool.reset();
+          }
           get().refreshState();
         }
-      }
+      },
     }),
     {
       name: "gtd-tool-store",
-      // Don't persist the tool instance itself, only the state
       partialize: (state) => ({
-        todoListState: state.todoListState
+        toolStates: state.toolStates,
       }),
-      // Rehydrate the tool instance from persisted state
-      onRehydrateStorage: () => (state) => {
-        if (state && state.todoListState) {
-          const tool = new TodoListToolExecutor();
-          // Restore tool state from persisted data
-          (tool as any).state = state.todoListState;
-          state.todoListTool = tool;
+      // Migrate from the old per-tool format (todoListState / pomodoroState)
+      merge: (persisted: any, current) => {
+        const toolStates: Record<string, ToolState> =
+          persisted?.toolStates ?? {};
+
+        // Migrate old flat fields if present
+        if (persisted?.todoListState && !toolStates["todo-list"]) {
+          toolStates["todo-list"] = persisted.todoListState;
         }
-      }
-    }
-  )
+        if (persisted?.pomodoroState && !toolStates["pomodoro-timer"]) {
+          toolStates["pomodoro-timer"] = persisted.pomodoroState;
+        }
+
+        return { ...current, toolStates };
+      },
+    },
+  ),
 );

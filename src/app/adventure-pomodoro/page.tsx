@@ -18,12 +18,13 @@ import {
   getCurrentEnvironment,
 } from "@/lib/engine/context-builder";
 import { MappingBridge } from "@/lib/storyworld/mapping-bridge";
+import { PomodoroToolExecutor } from "@/lib/tools";
 import type { ToolStoryworldMappingConfig } from "@/lib/storyworld/mapping-bridge";
 import type { StoryWorldRendererInterface } from "@/lib/storyworld";
 import type { BaseStoryWorldExecutor } from "@/lib/storyworld";
 import type { NarrativeEntry } from "@/types/story";
 
-import mappingConfig from "@/lib/storyworld/mappings/todo-to-stardew.json";
+import mappingConfig from "@/lib/storyworld/mappings/pomodoro-to-stardew.json";
 
 /**
  * Registry of available storyworld executors keyed by the storyworld ID
@@ -115,7 +116,7 @@ function splitIntoSentences(text: string): { sentences: string[]; endIndex: numb
 
 // ── Main game component ────────────────────────────────────────────────────
 
-function AdventureGameVisual() {
+function AdventureGamePomodoro() {
   const router = useRouter();
   const {
     phase,
@@ -140,16 +141,29 @@ function AdventureGameVisual() {
 
   const { profile, storyWorld } = useSetupStore();
   const { isStreaming, setIsStreaming, sidebarOpen } = useUIStore();
-  const { getAllPublicStates } = useToolStore();
+  const { getAllPublicStates, executeAction, registerTool, getTool } = useToolStore();
 
   const [streamingText, setStreamingText] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [, setTickCount] = useState(0); // forces re-render on each tick
   const hasInitialized = useRef(false);
+  const pomodoroInitialized = useRef(false);
 
   // Storyworld state
   const [executor, setExecutor] = useState<BaseStoryWorldExecutor | null>(null);
   const [bridge, setBridge] = useState<MappingBridge | null>(null);
   const rendererRef = useRef<StoryWorldRendererInterface>(null);
+
+  // ── Initialize pomodoro tool ──────────────────────────────────────────
+
+  useEffect(() => {
+    if (pomodoroInitialized.current) return;
+    pomodoroInitialized.current = true;
+
+    if (!getTool("pomodoro-timer")) {
+      registerTool("pomodoro-timer", new PomodoroToolExecutor(), {});
+    }
+  }, [registerTool, getTool]);
 
   // ── Initialize executor + bridge from mapping config ───────────────────
 
@@ -176,12 +190,43 @@ function AdventureGameVisual() {
     }
   }, [executor]);
 
-  // ── Sync tasks → storyworld objects ────────────────────────────────────
+  // ── Sync pomodoro sessions → storyworld objects ─────────────────────
 
+  const pomodoroState = getTool("pomodoro-timer")?.getState();
+  const sessions = pomodoroState
+    ? Array.from(pomodoroState.instances.values())
+        .filter((inst) => inst.typeName === "Session")
+        .map((inst) => {
+          const session: { id: string; [key: string]: unknown } = { id: inst.instanceId, ...inst.state };
+          // Enrich with task title for label template rendering
+          const taskId = inst.state.associatedTaskId as string | null;
+          if (taskId) {
+            const task = tasks.find((t) => t.id === taskId);
+            if (task) session.associatedTaskTitle = task.title;
+          }
+          return session;
+        })
+    : [];
   useEffect(() => {
     if (!bridge) return;
-    bridge.syncTasks(tasks);
-  }, [bridge, tasks]);
+    bridge.syncObjects(sessions, "sessions");
+  }, [bridge, sessions]);
+
+  // ── Tick active pomodoro session every second ────────────────────────
+
+  const hasActiveSession = sessions.some((s) => s.status === "active");
+  useEffect(() => {
+    if (!hasActiveSession) return;
+
+    const interval = setInterval(async () => {
+      const toolStore = useToolStore.getState();
+      await toolStore.executeAction("pomodoro-timer", "timer-root", "tick", {});
+      // Force re-render so sessions/labels update
+      setTickCount((c) => c + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [hasActiveSession]);
 
   // ── Redirect if not playing ────────────────────────────────────────────
 
@@ -380,57 +425,87 @@ function AdventureGameVisual() {
             for (const toolCall of finalResponse.toolCalls) {
               try {
                 switch (toolCall.operation) {
+                  case "startSession": {
+                    const result = await toolStore.executeAction(
+                      "pomodoro-timer", "timer-root", "startSession",
+                      { type: toolCall.params.type ?? "work", taskId: toolCall.params.taskId },
+                    );
+                    const output = result.output as { sessionId?: string } | undefined;
+                    // Create corresponding storyworld crop for the new session
+                    if (bridge && output?.sessionId) {
+                      bridge.ensureObject(
+                        {
+                          id: output.sessionId,
+                          type: toolCall.params.type ?? "work",
+                          title: toolCall.params.type ?? "work",
+                          content: toolCall.params.type ?? "work",
+                        },
+                        "sessions",
+                      );
+                      await bridge.onToolAction(
+                        output.sessionId,
+                        "start",
+                        { type: toolCall.params.type ?? "work" },
+                      );
+                    }
+                    break;
+                  }
+
+                  case "pauseSession": {
+                    const timerRoot = toolStore.getTool("pomodoro-timer")?.getState().instances.get("timer-root");
+                    const sessionId = timerRoot?.state.currentSessionId as string | null;
+                    await toolStore.executeAction("pomodoro-timer", "timer-root", "pauseSession", {});
+                    if (bridge && sessionId) {
+                      await bridge.onToolAction(sessionId, "pause", {});
+                    }
+                    break;
+                  }
+
+                  case "resumeSession": {
+                    const timerRoot = toolStore.getTool("pomodoro-timer")?.getState().instances.get("timer-root");
+                    const sessionId = timerRoot?.state.currentSessionId as string | null;
+                    await toolStore.executeAction("pomodoro-timer", "timer-root", "resumeSession", {});
+                    if (bridge && sessionId) {
+                      await bridge.onToolAction(sessionId, "resume", {});
+                    }
+                    break;
+                  }
+
+                  case "completeSession": {
+                    const timerRoot = toolStore.getTool("pomodoro-timer")?.getState().instances.get("timer-root");
+                    const sessionId = timerRoot?.state.currentSessionId as string | null;
+                    await toolStore.executeAction("pomodoro-timer", "timer-root", "completeSession", {});
+                    if (bridge && sessionId) {
+                      await bridge.onToolAction(sessionId, "complete", {});
+                    }
+                    break;
+                  }
+
+                  case "cancelSession": {
+                    const timerRoot = toolStore.getTool("pomodoro-timer")?.getState().instances.get("timer-root");
+                    const sessionId = timerRoot?.state.currentSessionId as string | null;
+                    await toolStore.executeAction("pomodoro-timer", "timer-root", "cancelSession", {});
+                    if (bridge && sessionId) {
+                      await bridge.onToolAction(
+                        sessionId,
+                        "setStatus",
+                        { status: "cancelled" },
+                      );
+                    }
+                    break;
+                  }
+
+                  // Also support task-level operations for quest progression
                   case "updateTaskStatus":
                     await toolStore.executeAction(
                       "todo-list", toolCall.params.taskId, "updateStatus",
                       { status: toolCall.params.status },
                     );
-                    // Update completedTaskIds so the quest sidebar reflects changes
                     if (toolCall.params.status === "completed") {
                       completeTask(toolCall.params.taskId);
                     } else if (toolCall.params.status === "cancelled") {
                       skipTask(toolCall.params.taskId);
                     }
-                    // Propagate to storyworld via bridge
-                    if (bridge) {
-                      await bridge.onToolAction(
-                        toolCall.params.taskId,
-                        "updateStatus",
-                        { status: toolCall.params.status },
-                      );
-                    }
-                    break;
-
-                  case "reorderTasks":
-                    await toolStore.executeAction(
-                      "todo-list", "todolist-root", "reorderTasks",
-                      { taskIds: toolCall.params.taskIds },
-                    );
-                    break;
-
-                  case "addTask": {
-                    const result = await toolStore.executeAction(
-                      "todo-list", "todolist-root", "createTask",
-                      { title: toolCall.params.title, description: toolCall.params.description },
-                    );
-                    // Create corresponding storyworld object for the new task
-                    const output = result.output as
-                      | { taskId?: string }
-                      | undefined;
-                    if (bridge && output?.taskId) {
-                      bridge.ensureObjectForTask({
-                        id: output.taskId,
-                        title: toolCall.params.title,
-                        content: toolCall.params.title,
-                      });
-                    }
-                    break;
-                  }
-
-                  case "deleteTask":
-                    await toolStore.executeAction(
-                      "todo-list", toolCall.params.taskId, "delete", {},
-                    );
                     break;
 
                   default:
@@ -560,12 +635,6 @@ function AdventureGameVisual() {
                     ? "completed"
                     : "pending";
             await toolStore.executeAction("todo-list", u.taskId, "updateStatus", { status: newStatus });
-            // Propagate to storyworld via bridge
-            if (bridge) {
-              await bridge.onToolAction(u.taskId, "updateStatus", {
-                status: newStatus,
-              });
-            }
           }
           syncTasksFromTool();
         }
@@ -600,7 +669,6 @@ function AdventureGameVisual() {
       tasks,
       completedTaskIds,
       turnCount,
-      bridge,
       completeTask,
       skipTask,
       syncTasksFromTool,
@@ -715,10 +783,10 @@ function AdventureGameVisual() {
   );
 }
 
-export default function AdventureVisualPage() {
+export default function AdventurePomodoroPage() {
   return (
     <HydrationGate>
-      <AdventureGameVisual />
+      <AdventureGamePomodoro />
     </HydrationGate>
   );
 }

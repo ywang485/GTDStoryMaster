@@ -74,12 +74,12 @@ function SetupWizard() {
     }
   };
 
-  const handleBeginAdventure = (visual?: boolean) => {
+  const handleBeginAdventure = (mode?: "visual" | "pomodoro") => {
     if (isSetupComplete()) {
       if (typeof window !== "undefined") {
         localStorage.clear();
       }
-      router.push(visual ? "/setup/prepare?mode=visual" : "/setup/prepare");
+      router.push(mode ? `/setup/prepare?mode=${mode}` : "/setup/prepare");
     }
   };
 
@@ -180,7 +180,14 @@ function SetupWizard() {
           ) : (
             <>
               <button
-                onClick={() => handleBeginAdventure(true)}
+                onClick={() => handleBeginAdventure("pomodoro")}
+                disabled={!isSetupComplete()}
+                className="px-6 py-2 border border-black text-black font-light rounded-none hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
+              >
+                Pomodoro Adventure
+              </button>
+              <button
+                onClick={() => handleBeginAdventure("visual")}
                 disabled={!isSetupComplete()}
                 className="px-6 py-2 border border-black text-black font-light rounded-none hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
               >

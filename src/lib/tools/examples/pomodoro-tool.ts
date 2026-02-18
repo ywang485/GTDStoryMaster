@@ -6,10 +6,11 @@
  * - Multiple "Session" objects representing individual pomodoro sessions
  *
  * Exogenous Actions:
- * - Timer.start(): Start a new pomodoro session
- * - Timer.pause(): Pause the current session
- * - Timer.resume(): Resume a paused session
- * - Timer.complete(): Mark current session as complete
+ * - Timer.startSession(): Start a new pomodoro session
+ * - Timer.pauseSession(): Pause the current session
+ * - Timer.resumeSession(): Resume a paused session
+ * - Timer.completeSession(): Mark current session as complete
+ * - Timer.cancelSession(): Cancel/abandon the current session
  * - Timer.configure(): Change timer settings
  *
  * Public States:
@@ -100,7 +101,7 @@ const sessionStateVariables = [
 // ============================================================================
 
 const timerActions = [
-  exogenousAction('start', {
+  exogenousAction('startSession', {
     description: 'Start a new pomodoro session',
     params: [
       optionalParam('type', SessionTypeSchema, 'work', 'Type of session to start'),
@@ -109,20 +110,25 @@ const timerActions = [
     affects: ['currentSessionId'],
     returns: z.object({ sessionId: z.string(), type: SessionTypeSchema, durationSeconds: z.number() })
   }),
-  exogenousAction('pause', {
+  exogenousAction('pauseSession', {
     description: 'Pause the current active session',
     affects: ['currentSessionId'],
     returns: z.object({ success: z.boolean(), pausedAt: z.date() })
   }),
-  exogenousAction('resume', {
+  exogenousAction('resumeSession', {
     description: 'Resume a paused session',
     affects: ['currentSessionId'],
     returns: z.object({ success: z.boolean(), resumedAt: z.date() })
   }),
-  exogenousAction('complete', {
+  exogenousAction('completeSession', {
     description: 'Mark current session as complete',
     affects: ['currentSessionId', 'totalSessions', 'currentStreak', 'lastSessionEndTime'],
     returns: z.object({ success: z.boolean(), completedAt: z.date(), newStreak: z.number() })
+  }),
+  exogenousAction('cancelSession', {
+    description: 'Cancel/abandon the current session',
+    affects: ['currentSessionId', 'currentStreak'],
+    returns: z.object({ success: z.boolean(), cancelledAt: z.date() })
   }),
   exogenousAction('configure', {
     description: 'Update timer settings',
@@ -176,9 +182,9 @@ const pomodoroMetadata: ToolMetadata = {
 **Output**: Returns productivity metrics including total work time, completed sessions, and productivity score
 
 **How to use**:
-1. Start a work session with Timer.start()
+1. Start a work session with Timer.startSession()
 2. Work until the timer completes (25 minutes by default)
-3. Complete the session with Timer.complete()
+3. Complete the session with Timer.completeSession()
 4. Take a break (short or long depending on streak)
 5. Repeat for maximum productivity
 
@@ -243,9 +249,9 @@ export class PomodoroToolExecutor extends BaseToolExecutor {
     return this.state;
   }
 
-  // --- Action handlers (convention: action "start" → handleStart) -----------
+  // --- Action handlers (convention: action "startSession" → handleStartSession) ---
 
-  protected async handleStart(
+  protected async handleStartSession(
     timerInstance: ObjectInstance,
     _context: ActionContext
   ): Promise<ActionResult> {
@@ -300,7 +306,7 @@ export class PomodoroToolExecutor extends BaseToolExecutor {
     };
   }
 
-  protected async handlePause(
+  protected async handlePauseSession(
     timerInstance: ObjectInstance,
     _context: ActionContext
   ): Promise<ActionResult> {
@@ -326,7 +332,7 @@ export class PomodoroToolExecutor extends BaseToolExecutor {
     return { success: true, output: { success: true, pausedAt: now }, stateChanges };
   }
 
-  protected async handleResume(
+  protected async handleResumeSession(
     timerInstance: ObjectInstance,
     _context: ActionContext
   ): Promise<ActionResult> {
@@ -352,7 +358,7 @@ export class PomodoroToolExecutor extends BaseToolExecutor {
     return { success: true, output: { success: true, resumedAt: now }, stateChanges };
   }
 
-  protected async handleComplete(
+  protected async handleCompleteSession(
     timerInstance: ObjectInstance,
     _context: ActionContext
   ): Promise<ActionResult> {
@@ -398,6 +404,75 @@ export class PomodoroToolExecutor extends BaseToolExecutor {
         completedAt: now,
         newStreak: timerInstance.state.currentStreak as number
       },
+      stateChanges
+    };
+  }
+
+  protected async handleCancelSession(
+    timerInstance: ObjectInstance,
+    _context: ActionContext
+  ): Promise<ActionResult> {
+    const currentSessionId = timerInstance.state.currentSessionId as string | null;
+    if (!currentSessionId) {
+      return { success: false, error: 'No active session to cancel', stateChanges: new Map() };
+    }
+
+    const session = this.state.instances.get(currentSessionId);
+    if (!session) {
+      return { success: false, error: 'Current session not found', stateChanges: new Map() };
+    }
+
+    const now = new Date();
+    session.state.status = 'cancelled';
+    session.state.completedAt = now;
+    session.updatedAt = now;
+
+    const stateChanges = new Map<string, unknown>();
+
+    // Reset streak on cancel
+    timerInstance.state.currentStreak = 0;
+    stateChanges.set('currentStreak', 0);
+
+    timerInstance.state.currentSessionId = null;
+    stateChanges.set('currentSessionId', null);
+    timerInstance.updatedAt = now;
+
+    return {
+      success: true,
+      output: { success: true, cancelledAt: now },
+      stateChanges
+    };
+  }
+
+  protected async handleTick(
+    timerInstance: ObjectInstance,
+    _context: ActionContext
+  ): Promise<ActionResult> {
+    const currentSessionId = timerInstance.state.currentSessionId as string | null;
+    if (!currentSessionId) {
+      return { success: false, error: 'No active session to tick', stateChanges: new Map() };
+    }
+
+    const session = this.state.instances.get(currentSessionId);
+    if (!session || session.state.status !== 'active') {
+      return { success: false, error: 'Session is not active', stateChanges: new Map() };
+    }
+
+    const elapsed = (session.state.elapsedSeconds as number) + 1;
+    const duration = session.state.durationSeconds as number;
+    const remaining = Math.max(0, duration - elapsed);
+
+    session.state.elapsedSeconds = elapsed;
+    session.state.remainingSeconds = remaining;
+    session.updatedAt = new Date();
+
+    const stateChanges = new Map<string, unknown>();
+    stateChanges.set('elapsedSeconds', elapsed);
+    stateChanges.set('remainingSeconds', remaining);
+
+    return {
+      success: true,
+      output: { elapsed, remaining, completed: remaining === 0 },
       stateChanges
     };
   }

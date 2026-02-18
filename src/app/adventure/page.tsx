@@ -85,7 +85,7 @@ function AdventureGame() {
 
   const { profile, storyWorld } = useSetupStore();
   const { isStreaming, setIsStreaming, sidebarOpen } = useUIStore();
-  const { getPublicStates: getToolPublicStates } = useToolStore();
+  const { getAllPublicStates } = useToolStore();
   const [streamingText, setStreamingText] = useState("");
   const [exampleResponses, setExampleResponses] = useState<string[]>([]);
   const hasInitialized = useRef(false);
@@ -144,7 +144,7 @@ function AdventureGame() {
       const currentTasks = getTasks();
 
       // Get tool states for AI context
-      const toolStates = { todoList: getToolPublicStates() };
+      const toolStates = getAllPublicStates();
 
       const turnContext = buildTurnContext({
         turnNumber: turnCount + 1,
@@ -255,9 +255,9 @@ function AdventureGame() {
               try {
                 switch (toolCall.operation) {
                   case "updateTaskStatus":
-                    await toolStore.updateTaskStatus(
-                      toolCall.params.taskId,
-                      toolCall.params.status
+                    await toolStore.executeAction(
+                      "todo-list", toolCall.params.taskId, "updateStatus",
+                      { status: toolCall.params.status },
                     );
                     // Update completedTaskIds so the quest sidebar reflects changes
                     if (toolCall.params.status === "completed") {
@@ -268,19 +268,23 @@ function AdventureGame() {
                     break;
 
                   case "reorderTasks":
-                    await toolStore.reorderTasks(toolCall.params.taskIds);
+                    await toolStore.executeAction(
+                      "todo-list", "todolist-root", "reorderTasks",
+                      { taskIds: toolCall.params.taskIds },
+                    );
                     break;
 
                   case "addTask":
-                    // Use createTask from tool store
-                    await toolStore.createTask({
-                      title: toolCall.params.title,
-                      description: toolCall.params.description,
-                    });
+                    await toolStore.executeAction(
+                      "todo-list", "todolist-root", "createTask",
+                      { title: toolCall.params.title, description: toolCall.params.description },
+                    );
                     break;
 
                   case "deleteTask":
-                    await toolStore.deleteTask(toolCall.params.taskId);
+                    await toolStore.executeAction(
+                      "todo-list", toolCall.params.taskId, "delete", {},
+                    );
                     break;
 
                   default:
@@ -340,7 +344,7 @@ function AdventureGame() {
       completeTask,
       skipTask,
       getTasks,
-      getToolPublicStates,
+      getAllPublicStates,
     ],
   );
 
@@ -385,7 +389,7 @@ function AdventureGame() {
                 : u.status === "completed"
                   ? "completed"
                   : "pending";
-          await toolStore.updateTaskStatus(u.taskId, newStatus);
+          await toolStore.executeAction("todo-list", u.taskId, "updateStatus", { status: newStatus });
         }
         syncTasksFromTool();
       }

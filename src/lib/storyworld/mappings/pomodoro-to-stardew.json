@@ -1,0 +1,85 @@
+{
+  "mapping_name": "Pomodoro Timer to Stardew Valley",
+  "description": "Maps pomodoro timer sessions to crops in Stardew Valley storyworld. Each work session is visualized as a crop whose growth stage reflects timer progress (stage 0=seeds at start, stage 1=sprout at 25%, stage 2=growing at 50%, stage 3=maturing at 75%, stage 4=mature at 100%). Completed sessions produce mature crops that persist on the farm. Abandoned sessions cause crops to wilt.",
+  "version": "1.0.0",
+  "tool": "pomodoro-timer",
+  "storyworld": "stardew-valley-world-v1",
+  "mappings": {
+    "object_mappings": [
+      {
+        "source": "sessions",
+        "target": "crops",
+        "initial_state": []
+      }
+    ],
+    "action_mappings": [
+      {
+        "source_action": "start",
+        "type": "toolAction",
+        "condition": { "param": "type", "equals": "work" },
+        "target_action": "water",
+        "target_params": []
+      },
+      {
+        "source_action": "tick",
+        "type": "toolAction",
+        "target_action": "grow",
+        "target_params": [],
+        "progress_to_stage": {
+          "0": 0,
+          "1": 25,
+          "2": 50,
+          "3": 75,
+          "4": 100
+        }
+      },
+      {
+        "source_action": "complete",
+        "type": "toolAction",
+        "target_action": "mature",
+        "target_params": []
+      },
+      {
+        "source_action": "setStatus",
+        "type": "toolAction",
+        "condition": { "param": "status", "equals": "cancelled" },
+        "target_action": "wilt",
+        "target_params": []
+      },
+      {
+        "source_action": "pause",
+        "type": "toolAction",
+        "target_action": "water",
+        "target_params": []
+      },
+      {
+        "source_action": "resume",
+        "type": "toolAction",
+        "target_action": "water",
+        "target_params": []
+      }
+    ],
+    "metadata_mapping": [
+      {
+        "source_field": "id",
+        "target_field": "id",
+        "transform": "slugify"
+      }
+    ],
+    "label_template": {
+      "target_field": "label",
+      "format": "{taskTitle} {remaining}",
+      "fields": {
+        "taskTitle": {
+          "source_field": "associatedTaskTitle",
+          "fallback_field": "type",
+          "transform": "capitalize"
+        },
+        "remaining": {
+          "source_field": "remainingSeconds",
+          "transform": "format_time"
+        }
+      }
+    }
+  }
+}

@@ -16,6 +16,17 @@ export function buildNarratorSystemPrompt(
   )
   .join("\n");
 
+  const toolStatesBlock = context.toolStates
+    ? Object.entries(context.toolStates)
+        .map(([toolName, instances]) => {
+          const instanceLines = Object.entries(instances)
+            .map(([id, state]) => `  ${id}: ${JSON.stringify(state)}`)
+            .join("\n");
+          return `[${toolName}]\n${instanceLines}`;
+        })
+        .join("\n")
+    : "";
+
   return `<instruction>
 You are an Interactive Story Master for a productivity gamification system. Your role is to transform the user's daily tasks into an engaging narrative experience while optimizing their productivity and task completion.
 
@@ -51,7 +62,7 @@ STORY: [your narrative story text here]
 
 Then, output the structured data as JSON prefixed with "DATA:" on its own line:
 DATA: {
-	"toolCalls": [OPTIONAL: array of TodoList tool calls to update task state. Only include if tasks need to be updated, reordered, added, or deleted],
+	"toolCalls": [OPTIONAL: array of tool calls for TodoList and/or Pomodoro Timer. Only include when you need to change state],
 	"productivityObservation": (observation on the user's behavior that could be useful for future conversations),
   "exampleResponses": [(several example responses the user could give based on the current story and task progress)],
 	"explanation": (concise explanation of the current story in 1-2 sentences)
@@ -68,8 +79,10 @@ DATA: {
   "explanation": "故事开始，主角接受了第一个任务"
 }
 
-Important notes about toolCalls (TodoList operations):
-You can use the following operations to manage tasks:
+Important notes about toolCalls:
+You have access to the following tool operations. Include them in the "toolCalls" array when appropriate.
+
+### TodoList operations (task management):
 
 1. updateTaskStatus - Change a task's status:
    {"operation": "updateTaskStatus", "params": {"taskId": "task-id", "status": "pending"|"in_progress"|"completed"|"cancelled"}}
@@ -87,6 +100,30 @@ You can use the following operations to manage tasks:
 4. deleteTask - Remove a task that's no longer relevant:
    {"operation": "deleteTask", "params": {"taskId": "task-id"}}
 
+### Pomodoro Timer operations (time management):
+Use these to help the user manage focused work sessions using the Pomodoro technique. Each work session is typically 25 minutes, followed by a short break (5 min) or long break (15 min after every 4 work sessions). Weave timer events naturally into the narrative — starting a session can be framed as beginning a focused effort, completing one as finishing a milestone, pausing as catching breath, and cancelling as retreating or losing focus.
+
+1. startSession - Start a new pomodoro session:
+   {"operation": "startSession", "params": {"type": "work"|"short_break"|"long_break", "taskId": "optional-associated-task-id"}}
+   - Default type is "work". Use "short_break" or "long_break" for rest periods.
+   - Optionally associate with a task ID so the session tracks time for that task.
+   - Suggest starting a work session when the user begins a new task.
+   - After completing a work session, suggest starting a break session based on the current streak (long break every 4 work sessions).
+
+2. pauseSession - Pause the currently active session:
+   {"operation": "pauseSession", "params": {}}
+
+3. resumeSession - Resume a paused session:
+   {"operation": "resumeSession", "params": {}}
+
+4. completeSession - Mark the current session as complete:
+   {"operation": "completeSession", "params": {}}
+   - Call when the user reports finishing a focused work block or when they indicate the current task segment is done.
+
+5. cancelSession - Cancel/abandon the current session:
+   {"operation": "cancelSession", "params": {}}
+   - Use when the user explicitly abandons a session or gets significantly sidetracked.
+
 Notes about exampleResponses:
 Contextualize the following general categories with concrete actions related to current REAL-WORLD task execution state:
 - task progress report
@@ -96,27 +133,6 @@ Contextualize the following general categories with concrete actions related to 
 IMPORTANT: The responses should be describing what happens in the real-world instead of the fictional world. Refer to the tasks with the actual task content, NOT their metaphoric versions!
 Examples: "I fell asleep in the middle of reading emails", "prototyping went great!", "I spent 3 hours on this but not much progress", etc.
 </output_format>
-
-<system_capabilities>
-	<capability>
-		<id>pomodoro_timer</id>
-		<description>helps the user work in focused time intervals followed by short breaks to boost productivity and maintain concentration.</description>
-		<parameter>
-		  <id>time_interval</id>
-		</parameter>
-	</capability>
-	<capability>
-		<id>image_generation</id>
-		<description>creates new images from text descriptions.</description>
-		<parameter>
-		  <id>text_description</id>
-		</parameter>
-	</capability>
-	<capability>
-		<id>text_processor</id>
-		<description>software used to create, edit, and format written documents.</description>
-	</capability>
-</system_capabilities>
 
 <user_information>
 Name: ${profile.name}.
@@ -137,7 +153,11 @@ Description: ${storyWorld.description}
 <todo_list>
 ${taskStatus}
 </todo_list>
-
+${toolStatesBlock ? `
+<tool_states>
+${toolStatesBlock}
+</tool_states>
+` : ""}
 <other_context>
 Time: ${context.environment.currentTime}
 ${context.environment.weather ? `Weather: ${context.environment.weather}` : ""}
@@ -157,12 +177,26 @@ export function buildTurnUserPrompt(context: TurnContext) {
     )
     .join("\n");
 
+  const toolStatesBlock = context.toolStates
+    ? Object.entries(context.toolStates)
+        .map(([toolName, instances]) => {
+          const instanceLines = Object.entries(instances)
+            .map(([id, state]) => `  ${id}: ${JSON.stringify(state)}`)
+            .join("\n");
+          return `[${toolName}]\n${instanceLines}`;
+        })
+        .join("\n")
+    : "";
+
   return `<task>
 In your next turn, update the task completion state based on user input, and then continue the story reflecting user's input and all the above information in a meaningful way. The goal is to draw parallel between the user's actual day and task progression and the plot progression in the fictional world, help the user find meaning in their tasks, and optimize their productivity. When the previous task is completed, the system should move to the plot point corresponding to the next task.
 </task>
 <task_state>
 ${taskStatus}
-</task_state>
+</task_state>${toolStatesBlock ? `
+<tool_states>
+${toolStatesBlock}
+</tool_states>` : ""}
 <player_input>
 ${context.playerInput}
 </player_input>

@@ -15,9 +15,7 @@ export function buildTurnContext(params: {
   narrativeLog: NarrativeEntry[];
   playerInput: string;
   environment: EnvironmentContext;
-  toolStates?: {
-    todoList?: Record<string, Record<string, unknown>>;
-  };
+  toolStates?: Record<string, Record<string, Record<string, unknown>>>;
 }): TurnContext {
   const recentNarrative = params.narrativeLog.slice(
     -siteConfig.maxNarrativeContext,

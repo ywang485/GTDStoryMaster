@@ -31,10 +31,28 @@ export interface ActionMapping {
 }
 
 export interface MetadataMapping {
-  task_field: string;
-  crop_field: string;
+  /** Generic source field name (preferred) */
+  source_field?: string;
+  /** Generic target field name (preferred) */
+  target_field?: string;
+  /** @deprecated Use source_field instead */
+  task_field?: string;
+  /** @deprecated Use target_field instead */
+  crop_field?: string;
   transform: string;
   max_length?: number;
+}
+
+export interface LabelTemplateField {
+  source_field: string;
+  fallback_field?: string;
+  transform?: string;
+}
+
+export interface LabelTemplate {
+  target_field: string;
+  format: string;
+  fields: Record<string, LabelTemplateField>;
 }
 
 export interface ToolStoryworldMappingConfig {
@@ -47,6 +65,7 @@ export interface ToolStoryworldMappingConfig {
     object_mappings: ObjectMapping[];
     action_mappings: ActionMapping[];
     metadata_mapping: MetadataMapping[];
+    label_template?: LabelTemplate;
   };
 }
 
@@ -64,19 +83,33 @@ function truncate(text: string, maxLength: number): string {
   return text.slice(0, maxLength - 1) + "…";
 }
 
+function capitalize(text: string): string {
+  if (!text) return text;
+  return text.charAt(0).toUpperCase() + text.slice(1).replace(/_/g, " ");
+}
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
 function applyTransform(
   value: unknown,
   transform: string,
   maxLength?: number,
 ): unknown {
-  const str = String(value);
   switch (transform) {
     case "slugify":
-      return slugify(str);
+      return slugify(String(value));
     case "truncate":
-      return truncate(str, maxLength ?? 30);
+      return truncate(String(value), maxLength ?? 30);
+    case "capitalize":
+      return capitalize(String(value));
+    case "format_time":
+      return formatTime(typeof value === "number" ? value : parseInt(String(value), 10) || 0);
     default:
-      return str;
+      return String(value);
   }
 }
 
@@ -127,12 +160,15 @@ export class MappingBridge {
       Object.assign(state, mapping.initial_state);
     }
 
-    // Apply metadata mappings (task fields → storyworld object fields)
+    // Apply metadata mappings (source fields → storyworld object fields)
     for (const meta of this.config.mappings.metadata_mapping) {
-      const taskRecord = task as Record<string, unknown>;
-      const sourceValue = taskRecord[meta.task_field] ?? task.title;
+      const sourceRecord = task as Record<string, unknown>;
+      const sourceFieldName = meta.source_field ?? meta.task_field;
+      const targetFieldName = meta.target_field ?? meta.crop_field;
+      if (!sourceFieldName || !targetFieldName) continue;
+      const sourceValue = sourceRecord[sourceFieldName] ?? task.title;
       if (sourceValue !== undefined) {
-        state[meta.crop_field] = applyTransform(
+        state[targetFieldName] = applyTransform(
           sourceValue,
           meta.transform,
           meta.max_length,
@@ -144,44 +180,125 @@ export class MappingBridge {
   }
 
   /**
-   * Ensure a storyworld object exists for the given task.
+   * Compute a label from the label_template config and a source object's fields.
+   */
+  private computeLabel(source: Record<string, unknown>): string | null {
+    const template = this.config.mappings.label_template;
+    if (!template) return null;
+
+    let result = template.format;
+    for (const [placeholder, fieldDef] of Object.entries(template.fields)) {
+      let value = source[fieldDef.source_field];
+      if ((value === undefined || value === null) && fieldDef.fallback_field) {
+        value = source[fieldDef.fallback_field];
+      }
+      if (value === undefined || value === null) {
+        value = "";
+      }
+      const transformed = fieldDef.transform
+        ? applyTransform(value, fieldDef.transform)
+        : String(value);
+      result = result.replace(`{${placeholder}}`, String(transformed));
+    }
+    return result.trim();
+  }
+
+  /**
+   * Ensure a storyworld object exists for the given source object.
    * Creates one via `executor.createObject` if it doesn't exist yet.
    * Returns the storyworld object ID.
+   *
+   * @param obj              Source object with at least an `id` field
+   * @param sourceCollection Optional source collection name (e.g. "tasks", "sessions").
+   *                         Defaults to the first object_mapping's source.
    */
-  ensureObjectForTask(
-    task: { id: string; title?: string; content?: string },
+  ensureObject(
+    obj: { id: string; title?: string; content?: string; [key: string]: unknown },
+    sourceCollection?: string,
   ): string | null {
     // Already tracked?
-    const existing = this.taskObjectMap.get(task.id);
+    const existing = this.taskObjectMap.get(obj.id);
     if (existing) return existing;
 
-    const objectMapping = this.getObjectMapping("tasks");
+    const collection =
+      sourceCollection ??
+      this.config.mappings.object_mappings[0]?.source ??
+      "tasks";
+    const objectMapping = this.getObjectMapping(collection);
     if (!objectMapping) return null;
 
     const targetTypeId = objectMapping.target === "crops" ? "crop" : objectMapping.target;
 
-    // Derive a stable storyworld ID from task metadata
-    const label = task.title ?? task.content ?? task.id;
-    const objectId = slugify(label) || task.id;
+    // Derive a stable storyworld ID from object metadata
+    const label = obj.title ?? obj.content ?? obj.id;
+    const objectId = slugify(label) || obj.id;
 
     // Don't recreate if the executor already has it (page remount)
     if (this.executor.getObject(objectId)) {
-      this.taskObjectMap.set(task.id, objectId);
+      this.taskObjectMap.set(obj.id, objectId);
       return objectId;
     }
 
     const initialState = this.buildInitialState(
-      { ...task, content: label },
+      { ...obj, content: label },
       objectMapping,
     );
 
+    // Compute label from template if configured
+    const computedLabel = this.computeLabel(obj as Record<string, unknown>);
+    if (computedLabel) {
+      initialState[this.config.mappings.label_template!.target_field] = computedLabel;
+    }
+
     const result = this.executor.createObject(targetTypeId, objectId, initialState);
     if (result.success) {
-      this.taskObjectMap.set(task.id, objectId);
+      this.taskObjectMap.set(obj.id, objectId);
       return objectId;
     }
 
     return null;
+  }
+
+  /**
+   * Ensure a storyworld object exists for the given task.
+   * Convenience wrapper around `ensureObject` for the "tasks" collection.
+   */
+  ensureObjectForTask(
+    task: { id: string; title?: string; content?: string },
+  ): string | null {
+    return this.ensureObject(task, "tasks");
+  }
+
+  /**
+   * Sync a list of source objects — creates storyworld objects for any that
+   * don't yet have a corresponding object.
+   *
+   * @param objects          Source objects
+   * @param sourceCollection Optional source collection name. Defaults to
+   *                         the first object_mapping's source.
+   */
+  syncObjects(
+    objects: Array<{ id: string; [key: string]: unknown }>,
+    sourceCollection?: string,
+  ): void {
+    for (const obj of objects) {
+      this.ensureObject(obj, sourceCollection);
+
+      // Recompute label on existing objects (e.g. remaining time changes)
+      const template = this.config.mappings.label_template;
+      if (template) {
+        const objectId = this.taskObjectMap.get(obj.id);
+        if (objectId) {
+          const swObj = this.executor.getObject(objectId);
+          if (swObj) {
+            const label = this.computeLabel(obj as Record<string, unknown>);
+            if (label) {
+              swObj.state[template.target_field] = label;
+            }
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -191,9 +308,7 @@ export class MappingBridge {
   syncTasks(
     tasks: Array<{ id: string; title?: string; content?: string }>,
   ): void {
-    for (const task of tasks) {
-      this.ensureObjectForTask(task);
-    }
+    this.syncObjects(tasks, "tasks");
   }
 
   // ── Action dispatch ────────────────────────────────────────────────────
