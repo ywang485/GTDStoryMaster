@@ -81,6 +81,9 @@ export class SoundEngine {
       case "fertilizer-sound":
         this.generateFertilizerSound();
         break;
+      case "plant-seed":
+        this.generatePlantSound();
+        break;
       default:
         console.log(`Sound not implemented: ${soundId}`);
     }
@@ -452,6 +455,53 @@ export class SoundEngine {
 
       osc.start(t);
       osc.stop(t + 0.17);
+    });
+  }
+
+  private generatePlantSound(): void {
+    if (!this.audioContext || !this.sfxGainNode) return;
+
+    const now = this.audioContext.currentTime;
+
+    // Soft soil thud
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+    const filter = this.audioContext.createBiquadFilter();
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(100, now);
+    osc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
+
+    filter.type = "lowpass";
+    filter.frequency.value = 300;
+
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGainNode);
+
+    osc.start(now);
+    osc.stop(now + 0.1);
+
+    // Two quick ascending seed-drop notes
+    [440, 660].forEach((freq, i) => {
+      const o = this.audioContext!.createOscillator();
+      const g = this.audioContext!.createGain();
+
+      o.type = "square";
+      o.frequency.value = freq;
+
+      const t = now + 0.08 + i * 0.07;
+      g.gain.setValueAtTime(0.1, t);
+      g.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
+
+      o.connect(g);
+      g.connect(this.sfxGainNode!);
+
+      o.start(t);
+      o.stop(t + 0.06);
     });
   }
 

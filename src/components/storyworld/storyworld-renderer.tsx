@@ -58,6 +58,13 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
     const pendingInputRef = useRef<{ placeholder?: string; exampleResponses?: string[] } | null>(null);
     const [inputRequestTrigger, setInputRequestTrigger] = useState(0);
 
+    // Placement mode state (click-to-place objects)
+    const [placementPrompt, setPlacementPrompt] = useState<string | null>(null);
+    const placementResolveRef = useRef<((pos: { x: number; y: number }) => void) | null>(null);
+    const placementConstraints = useRef<{ minX: number; maxX: number; minY: number; maxY: number } | null>(null);
+    const placementGhostSprite = useRef<string | null>(null);
+    const cursorPosition = useRef<{ x: number; y: number } | null>(null);
+
     // Refs for synchronous access inside imperative handle (avoids stale closures)
     const isStreamingTextRef = useRef(false);
     const currentNarrativeRef = useRef("");
@@ -169,6 +176,18 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
           pendingInputRef.current = opts ?? {};
           // Bump trigger so the deferred-activation effect re-evaluates
           setInputRequestTrigger((n) => n + 1);
+        });
+      },
+      getPositionInput(opts?: {
+        prompt?: string;
+        constrainTo?: { minX: number; maxX: number; minY: number; maxY: number };
+        ghostSpriteId?: string;
+      }) {
+        return new Promise<{ x: number; y: number }>((resolve) => {
+          placementResolveRef.current = resolve;
+          placementConstraints.current = opts?.constrainTo ?? null;
+          placementGhostSprite.current = opts?.ghostSpriteId ?? null;
+          setPlacementPrompt(opts?.prompt ?? "Click to choose position");
         });
       },
     }), [currentNarrative, isTyping, width, height]);
@@ -347,6 +366,40 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
           ctx.fillText(lines[l], x, y + 40 + l * lineHeight);
         }
       });
+
+      // Draw ghost sprite during placement mode
+      if (placementResolveRef.current && cursorPosition.current) {
+        const pos = cursorPosition.current;
+        const ghostId = placementGhostSprite.current;
+        const ghostImage = ghostId ? spriteImages.current.get(ghostId) : null;
+        const ghostMeta = ghostId ? spriteMetadata.current.get(ghostId) : null;
+
+        ctx.globalAlpha = 0.5;
+        if (ghostImage && ghostMeta) {
+          const tileSize = ghostMeta.tileSize || 16;
+          const scale = ghostMeta.scale || 4.0;
+          const sw = tileSize * scale;
+          const sh = tileSize * scale;
+
+          if (ghostMeta.tileIndex !== undefined) {
+            const tilesPerRow = ghostMeta.tilesPerRow || 16;
+            const tileCol = ghostMeta.tileIndex % tilesPerRow;
+            const tileRow = Math.floor(ghostMeta.tileIndex / tilesPerRow);
+            const sx = tileCol * tileSize;
+            const sy = tileRow * tileSize;
+            ctx.drawImage(ghostImage, sx, sy, tileSize, tileSize, pos.x - sw / 2, pos.y - sh / 2, sw, sh);
+          } else {
+            ctx.drawImage(ghostImage, pos.x - sw / 2, pos.y - sh / 2, sw, sh);
+          }
+        } else {
+          // Fallback: draw a simple placeholder
+          ctx.fillStyle = "#8B4513";
+          ctx.fillRect(pos.x - 15, pos.y - 5, 30, 10);
+          ctx.fillStyle = "#90EE90";
+          ctx.fillRect(pos.x - 3, pos.y - 10, 6, 10);
+        }
+        ctx.globalAlpha = 1.0;
+      }
     }, [executor, getSpriteForObject]);
 
     // -----------------------------------------------------------------------
@@ -527,6 +580,53 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
       }
     }, [currentNarrative, narrativeQueue.length, isTyping, isStreamingText, inputPromptActive, inputRequestTrigger]);
 
+    // -----------------------------------------------------------------------
+    // Placement mode: canvas mouse handlers
+    // -----------------------------------------------------------------------
+
+    const clampToConstraints = useCallback((cx: number, cy: number) => {
+      const c = placementConstraints.current;
+      if (!c) return { x: cx, y: cy };
+      return {
+        x: Math.max(c.minX, Math.min(c.maxX, cx)),
+        y: Math.max(c.minY, Math.min(c.maxY, cy)),
+      };
+    }, []);
+
+    const toCanvasCoords = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return { x: 0, y: 0 };
+      // Use offsetX/offsetY (relative to the canvas element itself) rather than
+      // clientX - rect.left to avoid inaccuracies when getBoundingClientRect()
+      // is affected by ancestor CSS layout (flex centering, overflow-hidden, etc).
+      const scaleX = canvas.width / canvas.offsetWidth;
+      const scaleY = canvas.height / canvas.offsetHeight;
+      return {
+        x: e.nativeEvent.offsetX * scaleX,
+        y: e.nativeEvent.offsetY * scaleY,
+      };
+    }, []);
+
+    const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!placementResolveRef.current) return;
+      const raw = toCanvasCoords(e);
+      cursorPosition.current = clampToConstraints(raw.x, raw.y);
+    }, [toCanvasCoords, clampToConstraints]);
+
+    const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!placementResolveRef.current) return;
+      const raw = toCanvasCoords(e);
+      const pos = clampToConstraints(raw.x, raw.y);
+
+      const resolve = placementResolveRef.current;
+      placementResolveRef.current = null;
+      placementConstraints.current = null;
+      placementGhostSprite.current = null;
+      cursorPosition.current = null;
+      setPlacementPrompt(null);
+      resolve(pos);
+    }, [toCanvasCoords, clampToConstraints]);
+
     const handleNarrativeClick = () => {
       if (isTyping) {
         setIsTyping(false);
@@ -567,7 +667,9 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
           ref={canvasRef}
           width={width}
           height={height}
-          className="absolute inset-0"
+          className={`absolute inset-0${placementPrompt ? " cursor-crosshair" : ""}`}
+          onMouseMove={handleCanvasMouseMove}
+          onClick={handleCanvasClick}
         />
 
         {currentNarrative && !inputPromptActive && (
@@ -634,6 +736,14 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {placementPrompt && (
+          <div className="absolute top-4 left-4 right-4 flex justify-center pointer-events-none">
+            <div className="stardew-textbox" style={{ padding: "10px 20px", minHeight: "auto" }}>
+              <p className="text-sm text-center">{placementPrompt}</p>
             </div>
           </div>
         )}

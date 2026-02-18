@@ -215,10 +215,22 @@ export class MappingBridge {
   ensureObject(
     obj: { id: string; title?: string; content?: string; [key: string]: unknown },
     sourceCollection?: string,
+    position?: { x: number; y: number },
   ): string | null {
     // Already tracked?
     const existing = this.taskObjectMap.get(obj.id);
-    if (existing) return existing;
+    if (existing) {
+      // If a position is provided, update the object's position in case it was
+      // previously created without one (e.g. by syncObjects before the manual
+      // placement call resolved).
+      if (position) {
+        const swObj = this.executor.getObject(existing);
+        if (swObj?.renderState) {
+          swObj.renderState.position = position;
+        }
+      }
+      return existing;
+    }
 
     const collection =
       sourceCollection ??
@@ -250,7 +262,7 @@ export class MappingBridge {
       initialState[this.config.mappings.label_template!.target_field] = computedLabel;
     }
 
-    const result = this.executor.createObject(targetTypeId, objectId, initialState);
+    const result = this.executor.createObject(targetTypeId, objectId, initialState, position);
     if (result.success) {
       this.taskObjectMap.set(obj.id, objectId);
       return objectId;

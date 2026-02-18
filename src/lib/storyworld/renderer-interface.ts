@@ -60,4 +60,12 @@ export interface StoryWorldRendererInterface {
     placeholder?: string;
     exampleResponses?: string[];
   }): Promise<string>;
+
+  /** Prompt the user to click on the canvas to choose a position.
+   *  Shows a ghost sprite at the cursor. Resolves with the clicked position. */
+  getPositionInput(opts?: {
+    prompt?: string;
+    constrainTo?: { minX: number; maxX: number; minY: number; maxY: number };
+    ghostSpriteId?: string;
+  }): Promise<Position>;
 }

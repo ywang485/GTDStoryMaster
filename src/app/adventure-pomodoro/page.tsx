@@ -426,12 +426,22 @@ function AdventureGamePomodoro() {
               try {
                 switch (toolCall.operation) {
                   case "startSession": {
+                    // Prompt user to click where to place the crop
+                    let cropPosition: { x: number; y: number } | undefined;
+                    if (rendererRef.current) {
+                      cropPosition = await rendererRef.current.getPositionInput({
+                        prompt: "Click to plant your crop",
+                        constrainTo: { minX: 60, maxX: 740, minY: 50, maxY: 300 },
+                        ghostSpriteId: "stage0",
+                      });
+                    }
+
                     const result = await toolStore.executeAction(
                       "pomodoro-timer", "timer-root", "startSession",
                       { type: toolCall.params.type ?? "work", taskId: toolCall.params.taskId },
                     );
                     const output = result.output as { sessionId?: string } | undefined;
-                    // Create corresponding storyworld crop for the new session
+                    // Create corresponding storyworld crop at chosen position
                     if (bridge && output?.sessionId) {
                       bridge.ensureObject(
                         {
@@ -441,6 +451,7 @@ function AdventureGamePomodoro() {
                           content: toolCall.params.type ?? "work",
                         },
                         "sessions",
+                        cropPosition,
                       );
                       await bridge.onToolAction(
                         output.sessionId,

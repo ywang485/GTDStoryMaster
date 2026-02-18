@@ -151,6 +151,23 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
   }
 
   // ========================================
+  // OBJECT LIFECYCLE
+  // ========================================
+
+  createObject(
+    typeId: string,
+    objectId?: string,
+    initialState?: Record<string, any>,
+    position?: { x: number; y: number },
+  ) {
+    const result = super.createObject(typeId, objectId, initialState, position);
+    if (result.success && typeId === "crop") {
+      this._renderer?.playSound("plant-seed");
+    }
+    return result;
+  }
+
+  // ========================================
   // CROP ACTIONS
   // ========================================
 

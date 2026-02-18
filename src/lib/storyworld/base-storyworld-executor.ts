@@ -92,6 +92,7 @@ export abstract class BaseStoryWorldExecutor {
     typeId: string,
     objectId?: string,
     initialState?: Record<string, any>,
+    position?: { x: number; y: number },
   ): ActionResult {
     const objectType = this.objectTypesMap.get(typeId);
     if (!objectType) {
@@ -119,16 +120,21 @@ export abstract class BaseStoryWorldExecutor {
       Object.assign(state, objectType.initialState);
     }
 
-    // Compute random position within margins for this type
-    const margin = this.placementMargins[typeId] || {};
-    const minX = margin.left ?? 0;
-    const maxX = this.canvasWidth - (margin.right ?? 0);
-    const minY = margin.top ?? 0;
-    const maxY = this.canvasHeight - (margin.bottom ?? 0);
-    const position = {
-      x: minX + Math.random() * Math.max(0, maxX - minX),
-      y: minY + Math.random() * Math.max(0, maxY - minY),
-    };
+    // Use provided position or compute random position within margins
+    let finalPosition: { x: number; y: number };
+    if (position) {
+      finalPosition = position;
+    } else {
+      const margin = this.placementMargins[typeId] || {};
+      const minX = margin.left ?? 0;
+      const maxX = this.canvasWidth - (margin.right ?? 0);
+      const minY = margin.top ?? 0;
+      const maxY = this.canvasHeight - (margin.bottom ?? 0);
+      finalPosition = {
+        x: minX + Math.random() * Math.max(0, maxX - minX),
+        y: minY + Math.random() * Math.max(0, maxY - minY),
+      };
+    }
 
     const instance: ObjectInstance = {
       id,
@@ -137,7 +143,7 @@ export abstract class BaseStoryWorldExecutor {
       renderState: {
         visible: true,
         opacity: 1,
-        position,
+        position: finalPosition,
       },
     };
 
