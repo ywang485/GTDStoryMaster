@@ -171,10 +171,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("watering-can", { duration: 1000 });
     this.renderer.playSound("water-splash");
     this.renderer.showParticle("water-droplets", { duration: 800 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `Water cascades from the watering can onto the ${instance.state.type}. The soil darkens as it drinks in the moisture.`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -197,16 +197,16 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
       this.renderer.playAnimation("crop-mature", { duration: 1500 });
       this.renderer.playSound("growth-complete");
       this.renderer.showParticle("sparkle", { duration: 1000 });
-      this.renderer.displayText(
+      /*this.renderer.displayText(
         `The ${instance.state.type} has fully matured! Ripe and ready for harvest, it sways gently in the breeze.`,
         { waitForClick: true },
-      );
+      );*/
     } else {
       this.renderer.playAnimation("crop-grow", { duration: 800 });
-      this.renderer.displayText(
+      /*this.renderer.displayText(
         `The ${instance.state.type} grows taller overnight. Stage ${instance.state.growthStage} of 4 complete.`,
         { waitForClick: true },
-      );
+      );*/
     }
 
     return { success: true };
@@ -234,10 +234,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("harvest-crop", { duration: 1200 });
     this.renderer.playSound("harvest-sound");
     this.renderer.showParticle("collect-sparkle", { duration: 1000 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `You harvest ${quantity} ${quality} ${instance.state.type}! The fresh produce goes straight into your basket.`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -259,10 +259,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("apply-fertilizer", { duration: 800 });
     this.renderer.playSound("fertilizer-sound");
     this.renderer.showParticle("nutrient-glow", { duration: 1200 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       "You carefully apply fertilizer around the plant. It'll grow stronger and produce higher quality crops!",
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -287,10 +287,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("crop-wilt", { duration: 1000 });
     this.renderer.playSound("wilt-sound");
     this.renderer.showParticle("dry-dust", { duration: 800 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `The ${instance.state.type} droops and wilts from lack of water. Its leaves turn brown at the edges.`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -311,10 +311,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playSound("water-splash");
     this.renderer.showParticle("water-droplets", { duration: 800 });
     this.renderer.playAnimation("crop-revive", { duration: 1500 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `You water the wilted ${instance.state.type}. Slowly, it perks back up as the water revitalizes it!`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -333,10 +333,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("crop-mature", { duration: 1500 });
     this.renderer.playSound("growth-complete");
     this.renderer.showParticle("sparkle", { duration: 1000 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `The ${instance.state.type} surges with growth and instantly reaches full maturity! Ready for harvest.`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -355,10 +355,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
 
     if (!isWithinHours) {
       this.renderer.playSound("door-locked");
-      this.renderer.displayText(
+      /*this.renderer.displayText(
         `The ${instance.state.type} is closed. It opens at ${instance.state.openHours.start}:00 and closes at ${instance.state.openHours.end}:00.`,
         { waitForClick: true },
-      );
+      );*/
       return { success: true };
     }
 
@@ -373,10 +373,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
           ? "coal and hot metal"
           : "old books";
 
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `The door chimes as you enter the ${instance.state.type}. The familiar smell of ${smellDesc} fills the air.`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -388,10 +388,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     const hasItem = instance.state.inventory.includes(params.item);
     if (!hasItem) {
       this.renderer.playSound("negative-sound");
-      this.renderer.displayText(
+      /*this.renderer.displayText(
         `Sorry, we don't have ${params.item} in stock right now.`,
         { waitForClick: true },
-      );
+      );*/
       return { success: true };
     }
 
@@ -409,10 +409,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("cash-register", { duration: 800 });
     this.renderer.playSound("ka-ching");
     this.renderer.showParticle("coin-sparkle", { duration: 600 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `You purchase ${quantity}x ${params.item} for ${totalCost}g. The shopkeeper smiles and carefully wraps your items.`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -431,10 +431,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playSound("hammer-sounds");
     this.renderer.showParticle("construction-dust", { duration: 2000 });
     this.renderer.playSound("upgrade-complete");
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `After days of construction, the ${instance.state.type} has been upgraded to level ${instance.state.upgradeLevel}! It now has more inventory and better services.`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -469,10 +469,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("villager-talk", { duration: 2000 });
     this.renderer.showSprite(`${instance.state.name}-portrait`);
     this.renderer.playSound("dialogue-sound");
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `${instance.state.name}: "${dialogue}"`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -501,10 +501,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     if (isLoved) {
       this.renderer.showParticle("love-hearts", { duration: 2000 });
     }
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `You give ${params.item} to ${instance.state.name}. ${instance.state.name}: "${reaction}" ${isLoved ? "(+2 hearts)" : "(+1 heart)"}`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -525,10 +525,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("villager-excited", { duration: 1000 });
     this.renderer.playSound("acceptance-sound");
     this.renderer.showParticle("excitement-sparkle", { duration: 1500 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `${instance.state.name}: "I'd love to go to the ${params.event} with you! Thanks for inviting me!"`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -554,10 +554,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.showParticle("feed-sparkle", { duration: 800 });
 
     const feedType = instance.state.type === "chicken" ? "wheat" : "hay";
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `You place fresh ${feedType} in ${instance.state.name}'s feeding trough. ${instance.state.name} happily munches away!`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -584,10 +584,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("animal-happy", { duration: 1500 });
     this.renderer.playSound("animal-content-sound");
     this.renderer.showParticle("love-hearts", { duration: 1200 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `You gently pet ${instance.state.name}. ${instance.state.name} nuzzles against your hand contentedly. "${sound}"`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -620,10 +620,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     this.renderer.playAnimation("collect-produce", { duration: 1000 });
     this.renderer.playSound("collect-sound");
     this.renderer.showParticle("collect-sparkle", { duration: 800 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `You collect a ${qualityLabel} ${produce} from ${instance.state.name}! ${instance.state.happiness > 80 ? "The high quality shows how happy and healthy they are!" : ""}`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
@@ -646,10 +646,10 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
     instance.state.age += 1;
 
     this.renderer.showParticle("produce-ready", { duration: 500 });
-    this.renderer.displayText(
+    /*this.renderer.displayText(
       `${instance.state.name} has produced fresh ${quality} quality goods overnight!`,
       { waitForClick: true },
-    );
+    );*/
 
     return { success: true };
   }
