@@ -1,8 +1,8 @@
 {
-  "mapping_name": "Pomodoro Timer to Stardew Valley",
-  "description": "Maps pomodoro timer sessions to crops in Stardew Valley storyworld. Each work session is visualized as a crop whose growth stage reflects timer progress (stage 0=seeds at start, stage 1=sprout at 25%, stage 2=growing at 50%, stage 3=maturing at 75%, stage 4=mature at 100%). Completed sessions produce mature crops that persist on the farm. Abandoned sessions cause crops to wilt.",
-  "version": "2.0.0",
-  "tools": ["pomodoro-timer"],
+  "mapping_name": "GTD Suite to Stardew Valley",
+  "description": "Unified multi-tool mapping: pomodoro timer sessions appear as growing crops that water and mature with each work session; the entire todo list appears as a single billboard whose content reflects all task statuses.",
+  "version": "2.1.0",
+  "tools": ["todo-list", "pomodoro-timer"],
   "storyworld": "stardew-valley-world-v1",
   "mappings": {
     "object_mappings": [
@@ -11,6 +11,12 @@
         "source": "sessions",
         "target": "crops",
         "initial_state": []
+      },
+      {
+        "tool": "todo-list",
+        "source": "todolist",
+        "target": "billboard",
+        "initial_state": { "content": "", "position": { "x": 650, "y": 100 } }
       }
     ],
     "action_mappings": [
@@ -64,15 +70,30 @@
         "type": "toolAction",
         "target_action": "water",
         "target_params": []
+      },
+      {
+        "tool": "todo-list",
+        "source_action": "refresh",
+        "type": "toolAction",
+        "target_action": "update_content",
+        "target_params": [{ "source": "content", "target": "content" }]
+      },
+      {
+        "source_action": "clickObject",
+        "type": "UIAction",
+        "target_action": "harvest",
+        "target_params": []
       }
     ],
     "metadata_mapping": [
       {
+        "tool": "pomodoro-timer",
         "source_field": "id",
         "target_field": "id",
         "transform": "slugify"
       },
       {
+        "tool": "pomodoro-timer",
         "target_field": "label",
         "transform": "template",
         "format": "{taskTitle} {remaining}",

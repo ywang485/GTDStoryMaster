@@ -1,58 +1,62 @@
 {
   "mapping_name": "TodoList to Stardew Valley",
   "description": "Maps todo list items to crops in Stardew Valley storyworld. Tasks are visualized as crops that grow as you make progress.",
-  "version": "1.0.0",
-  "tool": "todo-list",
+  "version": "2.0.0",
+  "tools": ["todo-list"],
   "storyworld": "stardew-valley-world-v1",
   "mappings": {
     "object_mappings": [
       {
+        "tool": "todo-list",
         "source": "tasks",
         "target": "crops",
         "initial_state": []
       }
     ],
     "action_mappings": [
-        {
-          "source_action": "updateStatus",
-          "type": "toolAction",
-          "condition": { "param": "status", "equals": "completed" },
-          "target_action": "mature",
-          "target_params": []
-        },
-        {
-          "source_action": "updateStatus",
-          "type": "toolAction",
-          "condition": { "param": "status", "equals": "canceled" },
-          "target_action": "wilt",
-          "target_params": []
-        },
-        {
-          "source_action": "updateStatus",
-          "type": "toolAction",
-          "condition": { "param": "status", "equals": "in_progress" },
-          "target_action": "grow",
-          "target_params": []
-        },
-        {
-          "source_action": "clickObject",
-          "type": "UIAction",
-          "target_action": "harvest",
-          "target_params": []
-        }
-      ],
+      {
+        "tool": "todo-list",
+        "source_action": "updateStatus",
+        "type": "toolAction",
+        "condition": { "param": "status", "equals": "completed" },
+        "target_action": "mature",
+        "target_params": []
+      },
+      {
+        "tool": "todo-list",
+        "source_action": "updateStatus",
+        "type": "toolAction",
+        "condition": { "param": "status", "equals": "canceled" },
+        "target_action": "wilt",
+        "target_params": []
+      },
+      {
+        "tool": "todo-list",
+        "source_action": "updateStatus",
+        "type": "toolAction",
+        "condition": { "param": "status", "equals": "in_progress" },
+        "target_action": "grow",
+        "target_params": []
+      },
+      {
+        "source_action": "clickObject",
+        "type": "UIAction",
+        "target_action": "harvest",
+        "target_params": []
+      }
+    ],
     "metadata_mapping": [
-        {
-          "task_field": "content",
-          "crop_field": "id",
-          "transform": "slugify"
-        },
-        {
-          "task_field": "content",
-          "crop_field": "label",
-          "transform": "truncate",
-          "max_length": 30
-        }
-      ]
+      {
+        "source_field": "content",
+        "target_field": "id",
+        "transform": "slugify"
+      },
+      {
+        "source_field": "content",
+        "target_field": "label",
+        "transform": "truncate",
+        "max_length": 30
+      }
+    ]
   }
 }

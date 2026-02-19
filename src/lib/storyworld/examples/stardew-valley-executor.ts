@@ -102,6 +102,13 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
           ],
         },
       },
+      billboard: {
+        stateAssets: {
+          default: [
+            { id: "billboard-sprite", type: "sprite", url: "/assets/farm/billboard.png", scale: 2.0 },
+          ],
+        },
+      },
       livestock: {
         stateAssets: {
           happy: [
@@ -147,6 +154,7 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
       livestock: { top: 200, bottom: 120, left: 80, right: 80 },
       villager:  { top: 100, bottom: 200, left: 40, right: 40 },
       facility:  { top: 50,  bottom: 250, left: 40, right: 40 },
+      billboard: { top: 80,  bottom: 200, left: 40, right: 40 },
     };
   }
 
@@ -667,6 +675,23 @@ export class StardewValleyExecutor extends BaseStoryWorldExecutor {
       `${instance.state.name} has produced fresh ${quality} quality goods overnight!`,
       { waitForClick: true },
     );*/
+
+    return { success: true };
+  }
+
+  // ========================================
+  // BILLBOARD ACTIONS
+  // ========================================
+
+  protected async handleUpdate_content(
+    instance: ObjectInstance,
+    params: Record<string, any>,
+  ): Promise<ActionResult> {
+    if (typeof params.content !== "string") {
+      return { success: false, error: "content parameter must be a string" };
+    }
+
+    instance.state.content = params.content;
 
     return { success: true };
   }

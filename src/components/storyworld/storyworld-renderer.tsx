@@ -58,6 +58,12 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
     const pendingInputRef = useRef<{ placeholder?: string; exampleResponses?: string[] } | null>(null);
     const [inputRequestTrigger, setInputRequestTrigger] = useState(0);
 
+    // Billboard modal state
+    const [billboardModal, setBillboardModal] = useState<{ content: string } | null>(null);
+
+    // Hit areas for clickable canvas objects (billboard etc.)
+    const objectBounds = useRef<{ id: string; typeId: string; x1: number; y1: number; x2: number; y2: number }[]>([]);
+
     // Placement mode state (click-to-place objects)
     const [placementPrompt, setPlacementPrompt] = useState<string | null>(null);
     const placementResolveRef = useRef<((pos: { x: number; y: number }) => void) | null>(null);
@@ -278,6 +284,8 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
         if (happiness > 70) stateKey = "happy";
         else if (happiness < 30) stateKey = "sick";
         else stateKey = "neutral";
+      } else if (obj.typeId === "billboard") {
+        stateKey = "default";
       }
 
       if (!stateKey || !assetLibrary.stateAssets[stateKey]) return null;
@@ -302,6 +310,9 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
+      // Reset hit bounds each frame
+      objectBounds.current = [];
+
       // Render objects
       const objects = Object.values(state.objects);
 
@@ -313,6 +324,27 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
         const spriteId = getSpriteForObject(obj);
         const spriteImage = spriteId ? spriteImages.current.get(spriteId) : null;
         const metadata = spriteId ? spriteMetadata.current.get(spriteId) : null;
+
+        // Billboard: sprite render (when loaded) or procedural fallback + record hit bounds
+        if (obj.typeId === "billboard") {
+          if (spriteImage) {
+            const scale = metadata?.scale || 2.0;
+            const spriteWidth = spriteImage.naturalWidth * scale;
+            const spriteHeight = spriteImage.naturalHeight * scale;
+            ctx.drawImage(spriteImage, x - spriteWidth / 2, y - spriteHeight / 2, spriteWidth, spriteHeight);
+            objectBounds.current.push({ id: obj.id, typeId: "billboard", x1: x - spriteWidth / 2, y1: y - spriteHeight / 2, x2: x + spriteWidth / 2, y2: y + spriteHeight / 2 });
+          } else {
+            renderBillboard(ctx, x, y, obj);
+            // Sign board bounds: 80px wide, 50px tall, centered at x, from y-90 to y-40
+            objectBounds.current.push({ id: obj.id, typeId: "billboard", x1: x - 40, y1: y - 90, x2: x + 40, y2: y - 40 });
+          }
+          ctx.fillStyle = "#000000";
+          ctx.font = "10px monospace";
+          ctx.textAlign = "center";
+          const billboardLabel: string = obj.state.label || obj.id;
+          ctx.fillText(billboardLabel, x, y + 30);
+          return;
+        }
 
         if (spriteImage) {
           const tileSize = metadata?.tileSize || 16;
@@ -405,6 +437,35 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
     // -----------------------------------------------------------------------
     // Procedural fallback renderers
     // -----------------------------------------------------------------------
+
+    const renderBillboard = (ctx: CanvasRenderingContext2D, x: number, y: number, _obj: any) => {
+      // Wooden post
+      ctx.fillStyle = "#8B5E3C";
+      ctx.fillRect(x - 3, y - 50, 6, 50);
+
+      // Sign board background
+      ctx.fillStyle = "#C8A96B";
+      ctx.fillRect(x - 40, y - 90, 80, 50);
+
+      // Sign board border
+      ctx.strokeStyle = "#6B4226";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x - 40, y - 90, 80, 50);
+
+      // Nails (corner dots)
+      ctx.fillStyle = "#555";
+      for (const [nx, ny] of [[-35, -85], [32, -85], [-35, -44], [32, -44]]) {
+        ctx.beginPath();
+        ctx.arc(x + nx, y + ny, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // "Click me" indicator — small arrow icon
+      ctx.fillStyle = "#6B4226";
+      ctx.font = "bold 10px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("📋", x, y - 58);
+    };
 
     const renderCrop = (ctx: CanvasRenderingContext2D, x: number, y: number, obj: any) => {
       const stage = obj.state.growthStage || 0;
@@ -614,18 +675,32 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
     }, [toCanvasCoords, clampToConstraints]);
 
     const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!placementResolveRef.current) return;
       const raw = toCanvasCoords(e);
-      const pos = clampToConstraints(raw.x, raw.y);
 
-      const resolve = placementResolveRef.current;
-      placementResolveRef.current = null;
-      placementConstraints.current = null;
-      placementGhostSprite.current = null;
-      cursorPosition.current = null;
-      setPlacementPrompt(null);
-      resolve(pos);
-    }, [toCanvasCoords, clampToConstraints]);
+      // Placement mode takes priority
+      if (placementResolveRef.current) {
+        const pos = clampToConstraints(raw.x, raw.y);
+        const resolve = placementResolveRef.current;
+        placementResolveRef.current = null;
+        placementConstraints.current = null;
+        placementGhostSprite.current = null;
+        cursorPosition.current = null;
+        setPlacementPrompt(null);
+        resolve(pos);
+        return;
+      }
+
+      // Check for billboard clicks
+      const hit = objectBounds.current.find(
+        (b) => b.typeId === "billboard" && raw.x >= b.x1 && raw.x <= b.x2 && raw.y >= b.y1 && raw.y <= b.y2,
+      );
+      if (hit) {
+        const obj = executor.getState().objects[hit.id];
+        if (obj) {
+          setBillboardModal({ content: obj.state.content as string || "" });
+        }
+      }
+    }, [executor, toCanvasCoords, clampToConstraints]);
 
     const handleNarrativeClick = () => {
       if (isTyping) {
@@ -752,6 +827,32 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
           <div key={id} className="animation-indicator" />
         ))}
 
+        {billboardModal && (
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ background: "rgba(0,0,0,0.55)", zIndex: 50 }}
+            onClick={() => setBillboardModal(null)}
+          >
+            <div
+              className="billboard-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className="billboard-modal-content"
+                dangerouslySetInnerHTML={{ __html: billboardModal.content || "<em>No content yet.</em>" }}
+              />
+              <div className="billboard-modal-footer">
+                <button
+                  className="stardew-submit-btn"
+                  onClick={() => setBillboardModal(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <style jsx>{`
           .storyworld-renderer {
             background: linear-gradient(to bottom, #87CEEB 0%, #98D8C8 100%);
@@ -849,6 +950,52 @@ export const StoryWorldRenderer = forwardRef<StoryWorldRendererInterface, StoryW
           .stardew-submit-btn:disabled {
             opacity: 0.5;
             cursor: default;
+          }
+
+          .billboard-modal {
+            background: #fffef7;
+            border: 4px solid #8b6f47;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            color: #331a00;
+            max-width: 480px;
+            width: 90%;
+            max-height: 70%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            animation: slideUp 0.25s ease-out;
+          }
+
+          .billboard-modal-content {
+            overflow-y: auto;
+            font-size: 15px;
+            line-height: 1.6;
+            font-family: Georgia, serif;
+          }
+
+          .billboard-modal-content :global(h1),
+          .billboard-modal-content :global(h2),
+          .billboard-modal-content :global(h3) {
+            font-family: 'Press Start 2P', monospace;
+            color: #6b4226;
+            margin: 0.5em 0;
+          }
+
+          .billboard-modal-content :global(ul),
+          .billboard-modal-content :global(ol) {
+            padding-left: 1.4em;
+          }
+
+          .billboard-modal-content :global(a) {
+            color: #5a8f3d;
+            text-decoration: underline;
+          }
+
+          .billboard-modal-footer {
+            display: flex;
+            justify-content: flex-end;
           }
 
           .animation-indicator {

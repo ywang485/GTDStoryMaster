@@ -74,7 +74,7 @@ function SetupWizard() {
     }
   };
 
-  const handleBeginAdventure = (mode?: "visual" | "pomodoro") => {
+  const handleBeginAdventure = (mode?: "visual" | "pomodoro" | "gtd") => {
     if (isSetupComplete()) {
       if (typeof window !== "undefined") {
         localStorage.clear();
@@ -185,6 +185,13 @@ function SetupWizard() {
                 className="px-6 py-2 border border-black text-black font-light rounded-none hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
               >
                 Pomodoro Adventure
+              </button>
+              <button
+                onClick={() => handleBeginAdventure("gtd")}
+                disabled={!isSetupComplete()}
+                className="px-6 py-2 border border-black text-black font-light rounded-none hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-sm tracking-wide"
+              >
+                GTD Adventure
               </button>
               <button
                 onClick={() => handleBeginAdventure("visual")}

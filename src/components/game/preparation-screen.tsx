@@ -192,6 +192,7 @@ export function PreparationScreen() {
       const dest =
         mode === "visual" ? "/adventure-visual"
         : mode === "pomodoro" ? "/adventure-pomodoro"
+        : mode === "gtd" ? "/adventure-gtd"
         : "/adventure";
       router.push(dest);
     } catch (err) {
